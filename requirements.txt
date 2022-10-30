@@ -1,0 +1,15 @@
+# pip install packages with 'python -m pip install'
+numpy
+pandas
+tqdm
+datasets
+spacy
+seaborn
+# other install instructions wiht en_core_web_sm
+
+# Direct dependency for aligner method
+git+https://github.com/dennlinger/summaries@main#egg=summaries
+
+# Direct dependency for summarization datasets inspection method
+# I have modified the library to fit more kinds of datasets
+git+https://git-dbs.ifi.uni-heidelberg.de/practicals/2022-jiahui-li@main#egg=DataStats
