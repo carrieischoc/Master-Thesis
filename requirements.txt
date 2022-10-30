@@ -5,7 +5,8 @@ tqdm
 datasets
 spacy
 seaborn
-# other install instructions wiht en_core_web_sm
+# install instructions wiht en_core_web_sm
+https://github.com/explosion/spacy-models/releases/download/en_core_web_trf-3.4.1/en_core_web_trf-3.4.1.tar.gz
 
 # Direct dependency for aligner method
 git+https://github.com/dennlinger/summaries@main#egg=summaries
