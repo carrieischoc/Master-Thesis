@@ -4,8 +4,7 @@ import numpy as np
 from rouge_score.rouge_scorer import _create_ngrams, _score_ngrams
 from spacy.tokens import Span
 from spacy.language import Doc
-from summaries.aligners import RougeNAligner
-from .split import check_split_sent
+from .split import check_split_sent, check_combine_feature
 from summaries.utils import get_nlp_model
 
 def compute_rouge_score(
@@ -26,7 +25,7 @@ def compute_rouge_score(
 
 def greedy_alignment(
     reference: List[str],
-    summary: List[str],
+    summary: str,
     n: int = 2,
     optimization_attribute="fmeasure",
     lang="en",
@@ -36,23 +35,24 @@ def greedy_alignment(
     selected_flag = np.zeros(len(reference))  # 0: not selected
     greedy_alignment = namedtuple("greedy_alignment", "scores sentences")
     # get nlp model - shouldn't disable lemma, tokenizer...
-    nlp = get_nlp_model(size="sm", disable=("ner",), lang="en")
+    nlp = get_nlp_model(size="sm", disable=("ner",), lang=lang)
 
+    # no need to select a good start...
     # get start by sentences with the maximum ROUGE scores relative to each sentence in the summary
-    aligner = RougeNAligner(
-        n=n, optimization_attribute=optimization_attribute, lang=lang
-    )
-    first_aligned_sentence = aligner.extract_source_sentences(summary, reference)[0]
-    current_alignment += ' ' + first_aligned_sentence.sentence
-    selected_index = first_aligned_sentence.index
-    selected_flag[selected_index] = 1
-    summary = " ".join(summary)
+    # aligner = RougeNAligner(
+    #     n=n, optimization_attribute=optimization_attribute, lang=lang
+    # )
+    # first_aligned_sentence = aligner.extract_source_sentences(summary, reference)[0]
+    # current_alignment += ' ' + first_aligned_sentence.sentence
+    # selected_index = first_aligned_sentence.index
+    # selected_flag[selected_index] = 1
+    # summary = " ".join(summary)
     summary_ngrams = _create_ngrams([token.lemma_ for token in nlp(summary)], n=n)
-    prev_score = compute_rouge_score(
-        nlp(current_alignment), summary_ngrams, optimization_attribute, n
-    )
+    # prev_score = compute_rouge_score(
+    #     nlp(current_alignment), summary_ngrams, optimization_attribute, n
+    # )
 
-    while True:
+    while np.any(selected_flag == 0):
         new_best_score = 0
         new_best_index = 0
         new_best_hypothesis_sentence = ""
@@ -86,7 +86,7 @@ def greedy_alignment(
 def map_greedy_alignment(example, match_n, optimization_attribute, lang):
 
     greedy_summary = greedy_alignment(
-        example["target"], example["source"], match_n, optimization_attribute, lang
+        example["source"], example["target"], match_n, optimization_attribute, lang
     )
 
     example["greedy_summary"] = greedy_summary.sentences
@@ -101,9 +101,11 @@ def extract_greedy_summaries(
     """
     The set of selected sentences is maximized with respect to the entire gold summary.
     """
-
-    dataset = check_split_sent(dataset, ["source", "target"])
-
+    # summary must be a string
+    dataset = check_combine_feature(dataset, "target")
+    # reference must be a list
+    dataset = check_split_sent(dataset, ["source"])
+    print(dataset.features)
     map_dict = {
         "match_n": match_n,
         "optimization_attribute": optimization_attribute,
