@@ -4,10 +4,8 @@ import operator
 import heapq
 import numpy as np
 from rouge_score.rouge_scorer import _create_ngrams, _score_ngrams
-import spacy
 from .split import check_combine_str
-
-nlp = spacy.load("en_core_web_sm", disable=("ner")) # shouldn't disable lemma, tokenizer...
+from summaries.utils import get_nlp_model
 
 
 def extract_similar_summaries(
@@ -41,12 +39,15 @@ def top_rouges_n_match(
     """
 
     # get doc format of summary and reference
-  
+
     similar_sentences = namedtuple(
         "similar_sentences", "indices scores positions sentences"
     )
     similar_sentences.indices = []
     similar_sentences.scores = []
+
+    # get nlp model - shouldn't disable lemma, tokenizer...
+    nlp = get_nlp_model(size="sm", disable=("ner",), lang="en")
 
     # combine n-grams and text sentence into one list comprehension loop
     reference_zip = [
@@ -58,7 +59,7 @@ def top_rouges_n_match(
     reference_list = reference_zip[1]
 
     for sentence in nlp(summary).sents:
-        
+
         target_ngrams = _create_ngrams([token.lemma_ for token in sentence], n=match_n)
 
         score = [

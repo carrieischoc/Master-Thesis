@@ -1,7 +1,5 @@
 from typing import List
-import spacy
-from datasets import load_dataset
-from spacy.language import Language
+from summaries.utils import get_nlp_model
 
 
 def combine_into_string(dataset, feature: str):
@@ -36,15 +34,30 @@ def check_combine_str(dataset, feature: List[str]):
     return dataset
 
 
-def split_into_sentences(dataset):
-    """
-    Expected a string or 'Doc' as input.
-    """
-    nlp = spacy.load("en_core_web_sm", disable=("tagger", "lemmatizer", "ner"))
+def split_into_sentences(dataset, feature: str):
+    nlp = get_nlp_model(size="sm", disable=("tagger", "lemmatizer", "ner"), lang="en")
     dataset = dataset.map(
-        lambda example: {
-            "source": [str(sent) for sent in nlp(example["source"]).sents],
-            "target": [str(sent) for sent in nlp(example["target"]).sents],
-        }
+        lambda example: {feature: [sent.text for sent in nlp(example[feature]).sents]}
     )
+    return dataset
+
+
+def check_split_feature(dataset, feature: str):
+
+    # get nlp model - shouldn't disable lemma, tokenizer...
+
+    if dataset.features[feature]._type == "Sequence":
+        dataset = combine_into_string(dataset, feature)
+
+    # transform string to list of sentences
+    dataset = split_into_sentences(dataset, feature)
+
+    return dataset
+
+
+def check_split_sent(dataset, feature: List[str]):
+
+    for fe in feature:
+        dataset = check_split_feature(dataset, fe)
+
     return dataset
