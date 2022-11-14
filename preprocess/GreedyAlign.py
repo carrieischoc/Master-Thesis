@@ -7,8 +7,12 @@ from spacy.language import Doc
 from .split import check_split_sent, check_combine_feature
 from summaries.utils import get_nlp_model
 
+
 def compute_rouge_score(
-    current_alignment: Union[Span, Doc], summary_ngrams: Counter, optimization_attribute: str, n: int
+    current_alignment: Union[Span, Doc],
+    summary_ngrams: Counter,
+    optimization_attribute: str,
+    n: int,
 ):
 
     current_align_ngrams = _create_ngrams(
@@ -36,6 +40,7 @@ def greedy_alignment(
     greedy_alignment = namedtuple("greedy_alignment", "scores sentences")
     # get nlp model - shouldn't disable lemma, tokenizer...
     nlp = get_nlp_model(size="sm", disable=("ner",), lang=lang)
+    summary_ngrams = _create_ngrams([token.lemma_ for token in nlp(summary)], n=n)
 
     # no need to select a good start...
     # get start by sentences with the maximum ROUGE scores relative to each sentence in the summary
@@ -47,7 +52,6 @@ def greedy_alignment(
     # selected_index = first_aligned_sentence.index
     # selected_flag[selected_index] = 1
     # summary = " ".join(summary)
-    summary_ngrams = _create_ngrams([token.lemma_ for token in nlp(summary)], n=n)
     # prev_score = compute_rouge_score(
     #     nlp(current_alignment), summary_ngrams, optimization_attribute, n
     # )
@@ -73,7 +77,9 @@ def greedy_alignment(
 
         # Additional sentence was no longer improving the score; terminal condition
         if new_best_score < prev_score:
-            return greedy_alignment(prev_score, current_alignment)
+            sorted_selected_indices = sorted(np.where(selected_flag==1)[0])
+            current_alignment_list = list(np.array(reference)[sorted_selected_indices])
+            return greedy_alignment(prev_score, " ".join(current_alignment_list))
         else:
             # Update hypothesis
             current_alignment += ' ' + new_best_hypothesis_sentence
@@ -105,7 +111,7 @@ def extract_greedy_summaries(
     dataset = check_combine_feature(dataset, "target")
     # reference must be a list
     dataset = check_split_sent(dataset, ["source"])
-    print(dataset.features)
+
     map_dict = {
         "match_n": match_n,
         "optimization_attribute": optimization_attribute,

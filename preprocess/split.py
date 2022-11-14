@@ -35,7 +35,7 @@ def check_combine_str(dataset, feature: List[str]):
 
 
 def split_into_sentences(dataset, feature: str):
-    nlp = get_nlp_model(size="sm", disable=("tagger", "lemmatizer", "ner"), lang="en")
+    nlp = get_nlp_model(size="sm", disable=("ner",), lang="en")
     dataset = dataset.map(
         lambda example: {feature: [sent.text for sent in nlp(example[feature]).sents]}
     )
