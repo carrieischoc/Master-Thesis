@@ -43,7 +43,7 @@ def greedy_alignment(
         n=n, optimization_attribute=optimization_attribute, lang=lang
     )
     first_aligned_sentence = aligner.extract_source_sentences(summary, reference)[0]
-    current_alignment += first_aligned_sentence.sentence
+    current_alignment += ' ' + first_aligned_sentence.sentence
     selected_index = first_aligned_sentence.index
     selected_flag[selected_index] = 1
     summary = " ".join(summary)
@@ -60,7 +60,7 @@ def greedy_alignment(
         for i in range(len(selected_flag)):
             if not selected_flag[i]:
                 rouge_score = compute_rouge_score(
-                    nlp(current_alignment + reference[i]),
+                    nlp(current_alignment + ' ' + reference[i]),
                     summary_ngrams,
                     optimization_attribute,
                     n,
@@ -76,7 +76,7 @@ def greedy_alignment(
             return greedy_alignment(prev_score, current_alignment)
         else:
             # Update hypothesis
-            current_alignment += new_best_hypothesis_sentence
+            current_alignment += ' ' + new_best_hypothesis_sentence
             prev_score = new_best_score
 
             # Also remove this sentence from the candidate set so it cannot be added in future iterations
