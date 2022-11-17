@@ -33,7 +33,7 @@ def top_rouges_n_match(
     top_n: int = 3,
     match_n: int = 2,
     optimization_attribute: str = "fmeasure",
-) -> NamedTuple:
+) -> NamedTuple: # intermediate_summary: List[str]
     """
     Based on summaries module
     """
@@ -104,8 +104,9 @@ def map_top_rouges_n_match(example, top_n, match_n, optimization_attribute):
         optimization_attribute,
     )
 
-    example["similar_summary"] = similar_sentences.sentences
-    example["similar_summary_scores"] = similar_sentences.scores
-    example["similar_summary_pos"] = similar_sentences.positions
+    # generate intermediate summary from most similar sentences relative to target
+    example["intermediate_summary"] = similar_sentences.sentences
+    example["intermediate_summary_scores"] = similar_sentences.scores
+    example["intermediate_summary_pos"] = similar_sentences.positions
 
     return example
