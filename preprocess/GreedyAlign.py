@@ -1,4 +1,4 @@
-from typing import List, Counter, Union
+from typing import List, Counter, Union, NamedTuple
 from collections import namedtuple
 import numpy as np
 from rouge_score.rouge_scorer import _create_ngrams, _score_ngrams
@@ -13,7 +13,7 @@ def compute_rouge_score(
     summary_ngrams: Counter,
     optimization_attribute: str,
     n: int,
-):
+) -> NamedTuple: # intermediate_summary: List[str]
 
     current_align_ngrams = _create_ngrams(
         [token.lemma_ for token in current_alignment], n=n
@@ -79,7 +79,7 @@ def greedy_alignment(
         if new_best_score < prev_score:
             sorted_selected_indices = sorted(np.where(selected_flag==1)[0])
             current_alignment_list = list(np.array(reference)[sorted_selected_indices])
-            return greedy_alignment(prev_score, " ".join(current_alignment_list))
+            return greedy_alignment(prev_score, current_alignment_list)
         else:
             # Update hypothesis
             current_alignment += ' ' + new_best_hypothesis_sentence
@@ -95,8 +95,9 @@ def map_greedy_alignment(example, match_n, optimization_attribute, lang):
         example["source"], example["target"], match_n, optimization_attribute, lang
     )
 
-    example["greedy_summary"] = greedy_summary.sentences
-    example["greedy_summary_scores"] = greedy_summary.scores
+    # generate intermediate summary from greedy method that maximize ROUGE scores
+    example["intermediate_summary"] = greedy_summary.sentences
+    example["intermediate_summary_scores"] = greedy_summary.scores
 
     return example
 
