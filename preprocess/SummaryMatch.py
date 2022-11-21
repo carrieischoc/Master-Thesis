@@ -41,10 +41,11 @@ def top_rouges_n_match(
     # get doc format of summary and reference
 
     similar_sentences = namedtuple(
-        "similar_sentences", "indices scores positions sentences"
+        "similar_sentences", "indices scores positions sentences reference summary"
     )
     similar_sentences.indices = []
     similar_sentences.scores = []
+    similar_sentences.summary = []
 
     # get nlp model - shouldn't disable lemma, tokenizer...
     nlp = get_nlp_model(size="sm", disable=("ner",), lang="en")
@@ -76,6 +77,7 @@ def top_rouges_n_match(
         topn = heapq.nlargest(top_n, enumerate(score), key=operator.itemgetter(1))
         similar_sentences.indices += list(zip(*topn))[0]
         similar_sentences.scores += list(zip(*topn))[1]
+        similar_sentences.summary.append(sentence)
 
     # sort and remove duplicate indices to make summaries consistent
     sorted_scores = sorted(
@@ -90,6 +92,7 @@ def top_rouges_n_match(
     similar_sentences.positions = np.array(similar_sentences.indices) / max(
         len(reference_list) - 1, 1
     )
+    similar_sentences.reference = reference_list
 
     return similar_sentences
 
@@ -105,8 +108,11 @@ def map_top_rouges_n_match(example, top_n, match_n, optimization_attribute):
     )
 
     # generate intermediate summary from most similar sentences relative to target
+    # transform all examples into list of sentences
     example["intermediate_summary"] = similar_sentences.sentences
     example["intermediate_summary_scores"] = similar_sentences.scores
     example["intermediate_summary_pos"] = similar_sentences.positions
+    example["source"] = similar_sentences.reference
+    example["target"] = similar_sentences.summary
 
     return example

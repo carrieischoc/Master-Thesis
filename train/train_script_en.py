@@ -6,6 +6,8 @@ import os, sys
 from datasets import Dataset, load_dataset
 from LoadData import load_data, read_js
 from preprocess import SummaryMatch, GreedyAlign
+from summaries.baselines import lexrank_st
+
 
 def get_args():
 
@@ -49,6 +51,8 @@ if __name__ == '__main__':
         dataset_intermediate_top3.save_to_disk(base_path+args.dataset[0]+"_intermediate_top3")
         dataset_intermediate_greedy.save_to_disk(base_path+args.dataset[0]+"_intermediate_greedy")
 
-    
+    # Extractive model Calling it on a list of pre-split sentences:
+    # k = 10
+    # lexrank_st(list_of_sentences, num_sentences=k)
 
 
