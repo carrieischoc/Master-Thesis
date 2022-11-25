@@ -58,7 +58,7 @@ def greedy_alignment(
 
     while np.any(selected_flag == 0):
         new_best_score = 0
-        new_best_index = 0
+        new_best_index = -1
         new_best_hypothesis_sentence = ""
         # Try the combination of the previously selected sentences + any of the remaining ones
         for i in range(len(selected_flag)):
@@ -75,8 +75,11 @@ def greedy_alignment(
                     new_best_hypothesis_sentence = reference[i]
                     new_best_index = i
 
+        # no optimal solutions, degrade to 1-gram match
+        if prev_score == 0:
+            n = 1
         # Additional sentence was no longer improving the score; terminal condition
-        if new_best_score < prev_score:
+        elif new_best_score <= prev_score:
             sorted_selected_indices = sorted(np.where(selected_flag==1)[0])
             current_alignment_list = list(np.array(reference)[sorted_selected_indices])
             return greedy_alignment(prev_score, current_alignment_list)
