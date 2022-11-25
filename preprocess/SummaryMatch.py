@@ -77,7 +77,7 @@ def top_rouges_n_match(
         topn = heapq.nlargest(top_n, enumerate(score), key=operator.itemgetter(1))
         similar_sentences.indices += list(zip(*topn))[0]
         similar_sentences.scores += list(zip(*topn))[1]
-        similar_sentences.summary.append(sentence)
+        similar_sentences.summary.append(sentence.text)
 
     # sort and remove duplicate indices to make summaries consistent
     sorted_scores = sorted(
