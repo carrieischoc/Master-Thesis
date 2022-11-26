@@ -1,0 +1,5 @@
+__pycache__/
+summaries_ca.egg-info/
+
+# Particular experiment files
+data/GEM/
