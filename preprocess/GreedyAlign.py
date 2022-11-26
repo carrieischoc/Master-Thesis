@@ -76,7 +76,7 @@ def greedy_alignment(
                     new_best_index = i
 
         # no optimal solutions, degrade to 1-gram match
-        if prev_score == 0:
+        if new_best_score == 0 and prev_score == 0:
             n = 1
         # Additional sentence was no longer improving the score; terminal condition
         elif new_best_score <= prev_score:
