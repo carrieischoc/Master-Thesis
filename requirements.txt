@@ -4,7 +4,12 @@ pandas
 tqdm
 datasets
 spacy
+matplotlib
 seaborn
+rouge-score
+transformers
+torch
+
 # install instructions wiht en_core_web_sm
 https://github.com/explosion/spacy-models/releases/download/en_core_web_trf-3.4.1/en_core_web_trf-3.4.1.tar.gz
 
