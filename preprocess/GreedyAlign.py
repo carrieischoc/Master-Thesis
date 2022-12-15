@@ -75,9 +75,10 @@ def greedy_alignment(
                     new_best_hypothesis_sentence = reference[i]
                     new_best_index = i
 
-        # no optimal solutions, degrade to 1-gram match
+        # no optimal solutions, all scores = 0, degrade to 1-gram match
         if new_best_score == 0 and prev_score == 0:
             n = 1
+            summary_ngrams = _create_ngrams([token.lemma_ for token in nlp(summary)], n=1)
         # Additional sentence was no longer improving the score; terminal condition
         elif new_best_score <= prev_score:
             sorted_selected_indices = sorted(np.where(selected_flag==1)[0])
@@ -90,6 +91,10 @@ def greedy_alignment(
 
             # Also remove this sentence from the candidate set so it cannot be added in future iterations
             selected_flag[new_best_index] = 1
+
+    # if all source sentences are selected, keep the original source/target??
+    return greedy_alignment(prev_score, reference)
+
 
 
 def map_greedy_alignment(example, match_n, optimization_attribute, lang):

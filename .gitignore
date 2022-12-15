@@ -1,5 +1,6 @@
 __pycache__/
 summaries_ca.egg-info/
+data/testdata.ipynb
 
 # Particular experiment files
 data/GEM/
