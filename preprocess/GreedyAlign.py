@@ -92,6 +92,10 @@ def greedy_alignment(
             # Also remove this sentence from the candidate set so it cannot be added in future iterations
             selected_flag[new_best_index] = 1
 
+    # if all source sentences are selected, keep the original source/target??
+    return greedy_alignment(prev_score, reference)
+
+
 
 def map_greedy_alignment(example, match_n, optimization_attribute, lang):
 
