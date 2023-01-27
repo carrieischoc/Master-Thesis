@@ -1,65 +1,81 @@
 from collections import namedtuple
-from typing import NamedTuple
+from typing import NamedTuple, List
 import operator
 import heapq
 import numpy as np
+from datasets import Dataset
 from rouge_score.rouge_scorer import _create_ngrams, _score_ngrams
-from .split import check_combine_str
+from .split import check_split_sent
 from summaries.utils import get_nlp_model
 
 
 def extract_similar_summaries(
-    dataset, top_n: int = 3, match_n: int = 2, optimization_attribute: str = "fmeasure"
+    dataset,
+    dataset_name: str,
+    split: str,
+    base_path: str,
+    top_n: int = 3,
+    match_n: int = 2,
+    optimization_attribute: str = "fmeasure",
+    num_proc=16,
 ):
     """
     Extract top n sentences similar to summary sentences from reference.
     """
 
-    dataset = check_combine_str(dataset, ["source", "target"])
+    try:
+        dataset = Dataset.load_from_disk(
+            base_path + dataset_name + "/" + split + "list_list_format"
+        )
+
+    except FileNotFoundError:
+        # check and generate ref[List], sum[List].
+        dataset = check_split_sent(dataset, ["source", "target"])
+        dataset.save_to_disk(
+            base_path + dataset_name + "/" + split + "list_list_format"
+        )
 
     map_dict = {
         "top_n": top_n,
         "match_n": match_n,
         "optimization_attribute": optimization_attribute,
     }
-    dataset = dataset.map(map_top_rouges_n_match, fn_kwargs=map_dict)
+    dataset = dataset.map(map_top_rouges_n_match, fn_kwargs=map_dict, num_proc=num_proc)
 
     return dataset
 
 
 def top_rouges_n_match(
-    summary: str,
-    reference: str,
+    summary: List[str],
+    reference: List[str],
     top_n: int = 3,
     match_n: int = 2,
     optimization_attribute: str = "fmeasure",
-) -> NamedTuple: # intermediate_summary: List[str]
+) -> NamedTuple:  # intermediate_summary: List[str]
     """
-    Based on summaries module
+    Based on summaries module.
+    Compasions are carried out between ref[List] and sum[List].
     """
-
-    # get doc format of summary and reference
-
-    similar_sentences = namedtuple(
-        "similar_sentences", "indices scores positions sentences reference summary"
-    )
-    similar_sentences.indices = []
-    similar_sentences.scores = []
-    similar_sentences.summary = []
 
     # get nlp model - shouldn't disable lemma, tokenizer...
     nlp = get_nlp_model(size="sm", disable=("ner",), lang="en")
+    # get doc format (spacy) of summary and reference
+    reference_doc = [nlp(sentence) for sentence in reference]
+    summary_doc = [nlp(sentence) for sentence in summary]
 
-    # combine n-grams and text sentence into one list comprehension loop
-    reference_zip = [
-        [_create_ngrams([token.lemma_ for token in sentence], n=match_n), sentence.text]
-        for sentence in nlp(reference).sents
+    similar_sentences = namedtuple(
+        "similar_sentences", "indices scores positions sentences"
+    )
+    similar_sentences.indices = []
+    similar_sentences.scores = []
+
+    # generate reference n-grams
+    reference_ngrams = [
+        _create_ngrams([token.lemma_ for token in sentence], n=match_n)
+        for sentence in reference_doc
     ]
-    reference_zip = list(zip(*reference_zip))
-    reference_ngrams = reference_zip[0]
-    reference_list = reference_zip[1]
 
-    for sentence in nlp(summary).sents:
+    for sentence in summary_doc:
 
         target_ngrams = _create_ngrams([token.lemma_ for token in sentence], n=match_n)
 
@@ -77,7 +93,6 @@ def top_rouges_n_match(
         topn = heapq.nlargest(top_n, enumerate(score), key=operator.itemgetter(1))
         similar_sentences.indices += list(zip(*topn))[0]
         similar_sentences.scores += list(zip(*topn))[1]
-        similar_sentences.summary.append(sentence.text)
 
     # sort and remove duplicate indices to make summaries consistent
     sorted_scores = sorted(
@@ -86,13 +101,10 @@ def top_rouges_n_match(
     similar_sentences.indices = np.array(sorted_scores)[:, 0].astype(int)
     similar_sentences.scores = np.array(sorted_scores)[:, 1]
 
-    similar_sentences.sentences = list(
-        np.array(reference_list)[similar_sentences.indices]
-    )
+    similar_sentences.sentences = list(np.array(reference)[similar_sentences.indices])
     similar_sentences.positions = np.array(similar_sentences.indices) / max(
-        len(reference_list) - 1, 1
+        len(reference) - 1, 1
     )
-    similar_sentences.reference = reference_list
 
     return similar_sentences
 
@@ -112,7 +124,5 @@ def map_top_rouges_n_match(example, top_n, match_n, optimization_attribute):
     example["intermediate_summary"] = similar_sentences.sentences
     example["intermediate_summary_scores"] = similar_sentences.scores
     example["intermediate_summary_pos"] = similar_sentences.positions
-    example["source"] = similar_sentences.reference
-    example["target"] = similar_sentences.summary
 
     return example

@@ -48,6 +48,7 @@ def check_split_feature(dataset, feature: str):
     # distinguish list of paragraphs from list of sentences
     if dataset.features[feature]._type == "Sequence" and any(['section_level' in x for x in dataset.column_names]):
         dataset = combine_into_string(dataset, feature)
+        dataset = dataset.remove_columns("section_level")
 
     # transform string to list of sentences
     if dataset.features[feature]._type == "Value":

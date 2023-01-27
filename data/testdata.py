@@ -3,6 +3,8 @@ from datasets import load_dataset
 import LoadData
 # from preprocess import SummaryMatch
 from preprocess import GreedyAlign
+import multiprocessing as mp
+print("Number of processors: ", mp.cpu_count())
 
 if __name__ == "__main__":
 
