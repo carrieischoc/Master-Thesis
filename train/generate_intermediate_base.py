@@ -54,7 +54,7 @@ def generate_intermediate_baselines(
             + split
             + "/baselines/"
             + "intermediate_top"
-            + topn
+            + str(topn)
         )
 
     elif method == "greedy":  # make sure the format of reference/summary: list/str
@@ -95,4 +95,13 @@ if __name__ == "__main__":
         num_process,
         optimization_attribute,
         top_n,
+    )
+    generate_intermediate_baselines(
+        dataset,
+        args.dataset[0],
+        args.split[0],
+        "greedy",
+        base_path,
+        num_process,
+        optimization_attribute
     )

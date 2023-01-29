@@ -76,10 +76,13 @@ def greedy_alignment(
 
         # no optimal solutions, all scores = 0, degrade to 1-gram match
         if new_best_score == 0 and prev_score == 0:
-            n = 1
-            summary_ngrams = _create_ngrams(
-                [token.lemma_ for token in nlp(summary)], n=1
-            )
+            if n == 1: # no matched 1-gram
+                return greedy_alignment(prev_score, [])
+            else:
+                n = 1
+                summary_ngrams = _create_ngrams(
+                    [token.lemma_ for token in nlp(summary)], n=1
+                )
         # Additional sentence was no longer improving the score; terminal condition
         elif new_best_score <= prev_score:
             sorted_selected_indices = sorted(np.where(selected_flag == 1)[0])
@@ -127,14 +130,14 @@ def extract_greedy_summaries(
 
     try:
         dataset = Dataset.load_from_disk(
-            base_path + dataset_name + "/" + split + "list_str_format"
+            base_path + dataset_name + "/" + split + "/" + "list_str_format"
         )
 
     except FileNotFoundError:
         # try to make use of results in oracle alignment
         try:
             dataset_ls = Dataset.load_from_disk(
-                base_path + dataset_name + "/" + split + "list_list_format"
+                base_path + dataset_name + "/" + split + "/" + "list_list_format"
             )
             dataset_src_ls = select_ds_column(
                 dataset_ls, "source"
@@ -149,7 +152,7 @@ def extract_greedy_summaries(
             # reference must be a list
             dataset = check_split_sent(dataset, ["source"])
 
-        dataset.save_to_disk(base_path + dataset_name + "/" + split + "list_str_format")
+        dataset.save_to_disk(base_path + dataset_name + "/" + split + "/" + "list_str_format")
 
     map_dict = {
         "match_n": match_n,

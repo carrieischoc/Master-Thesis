@@ -25,14 +25,14 @@ def extract_similar_summaries(
 
     try:
         dataset = Dataset.load_from_disk(
-            base_path + dataset_name + "/" + split + "list_list_format"
+            base_path + dataset_name + "/" + split + "/" + "list_list_format"
         )
 
     except FileNotFoundError:
         # check and generate ref[List], sum[List].
         dataset = check_split_sent(dataset, ["source", "target"])
         dataset.save_to_disk(
-            base_path + dataset_name + "/" + split + "list_list_format"
+            base_path + dataset_name + "/" + split + "/" + "list_list_format"
         )
 
     map_dict = {
