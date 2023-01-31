@@ -8,9 +8,18 @@ def get_args():
     # get command arguments
     parser = argparse.ArgumentParser(description="Get training parameters of datasets")
     parser.add_argument("-d", "--dataset", nargs=1, type=str, help="name of dataset")
-    parser.add_argument("-m", "--method", nargs=1, type=str, help="method of intermediate summary")
-    parser.add_argument("-n", "--n_top", nargs="?", type=int,const=1,
-        default=1, help="oracle alignment coefficient")
+    parser.add_argument(
+        "-m", "--method", nargs=1, type=str, help="method of intermediate summary"
+    )
+    parser.add_argument(
+        "-n",
+        "--n_top",
+        nargs="?",
+        type=int,
+        const=1,
+        default=1,
+        help="oracle alignment coefficient",
+    )
     parser.add_argument("--split", nargs=1, type=str, help="split of dataset")
     parser.add_argument(
         "-p",
@@ -87,8 +96,8 @@ if __name__ == "__main__":
     num_process = 16
     top_n = args.n_top
 
-    if args.method[0] == 'oracle':
-        
+    if args.method[0] == "oracle":
+
         generate_intermediate_baselines(
             dataset,
             args.dataset[0],
@@ -99,9 +108,9 @@ if __name__ == "__main__":
             "recall",
             top_n,
         )
-    
-    elif args.method[0] == 'greedy':
-        
+
+    elif args.method[0] == "greedy":
+
         generate_intermediate_baselines(
             dataset,
             args.dataset[0],
@@ -109,5 +118,5 @@ if __name__ == "__main__":
             "greedy",
             base_path,
             num_process,
-            "fmeasure"
+            "fmeasure",
         )

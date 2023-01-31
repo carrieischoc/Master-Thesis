@@ -76,7 +76,7 @@ def greedy_alignment(
 
         # no optimal solutions, all scores = 0, degrade to 1-gram match
         if new_best_score == 0 and prev_score == 0:
-            if n == 1: # no matched 1-gram
+            if n == 1:  # no matched 1-gram
                 return greedy_alignment(prev_score, [], n)
             else:
                 n = 1
@@ -154,7 +154,9 @@ def extract_greedy_summaries(
             # reference must be a list
             dataset = check_split_sent(dataset, ["source"])
 
-        dataset.save_to_disk(base_path + dataset_name + "/" + split + "/" + "list_str_format")
+        dataset.save_to_disk(
+            base_path + dataset_name + "/" + split + "/" + "list_str_format"
+        )
 
     map_dict = {
         "match_n": match_n,
