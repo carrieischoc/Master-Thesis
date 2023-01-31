@@ -1,8 +1,6 @@
 import argparse
-from datasets import Dataset, concatenate_datasets, load_dataset
-from LoadData import load_data, read_js
+from LoadData import load_data
 from preprocess import OracleAlign, GreedyAlign
-from summaries.baselines import lexrank_st
 
 
 def get_args():
@@ -31,7 +29,7 @@ def generate_intermediate_baselines(
     dataset_name: str,
     split: str,
     method: str,
-    bath_path: str,
+    base_path: str,
     num_process: int,
     optimization_attribute: str,
     topn: int = 1,
@@ -73,7 +71,7 @@ def generate_intermediate_baselines(
             + "/"
             + split
             + "/baselines/"
-            + "_intermediate_greedy"
+            + "intermediate_greedy"
         )
 
 
@@ -84,18 +82,17 @@ if __name__ == "__main__":
     args = get_args()
     dataset = load_data(args.dataset[0], args.split[0], args.sample_propor)
     num_process = 16
-    optimization_attribute = "recall"
     top_n = 1
-    generate_intermediate_baselines(
-        dataset,
-        args.dataset[0],
-        args.split[0],
-        "oracle",
-        base_path,
-        num_process,
-        optimization_attribute,
-        top_n,
-    )
+    # generate_intermediate_baselines(
+    #     dataset,
+    #     args.dataset[0],
+    #     args.split[0],
+    #     "oracle",
+    #     base_path,
+    #     num_process,
+    #     "recall",
+    #     top_n,
+    # )
     generate_intermediate_baselines(
         dataset,
         args.dataset[0],
@@ -103,5 +100,5 @@ if __name__ == "__main__":
         "greedy",
         base_path,
         num_process,
-        optimization_attribute
+        "fmeasure"
     )

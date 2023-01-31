@@ -46,7 +46,7 @@ def greedy_alignment(
     prev_score = 0
     current_alignment = ""
     selected_flag = np.zeros(len(reference))  # 0: not selected
-    greedy_alignment = namedtuple("greedy_alignment", "scores sentences")
+    greedy_alignment = namedtuple("greedy_alignment", "scores sentences n_gram")
     # get nlp model - shouldn't disable lemma, tokenizer...
     nlp = get_nlp_model(size="sm", disable=("ner",), lang=lang)
     summary_ngrams = _create_ngrams([token.lemma_ for token in nlp(summary)], n=n)
@@ -77,7 +77,7 @@ def greedy_alignment(
         # no optimal solutions, all scores = 0, degrade to 1-gram match
         if new_best_score == 0 and prev_score == 0:
             if n == 1: # no matched 1-gram
-                return greedy_alignment(prev_score, [])
+                return greedy_alignment(prev_score, [], n)
             else:
                 n = 1
                 summary_ngrams = _create_ngrams(
@@ -87,7 +87,8 @@ def greedy_alignment(
         elif new_best_score <= prev_score:
             sorted_selected_indices = sorted(np.where(selected_flag == 1)[0])
             current_alignment_list = list(np.array(reference)[sorted_selected_indices])
-            return greedy_alignment(prev_score, current_alignment_list)
+            # record the n of ROUGE-n
+            return greedy_alignment(prev_score, current_alignment_list, n)
         else:
             # Update hypothesis
             current_alignment += " " + new_best_hypothesis_sentence
@@ -98,7 +99,7 @@ def greedy_alignment(
             selected_flag[new_best_index] = 1
 
     # if all source sentences are selected, keep the original source/target??
-    return greedy_alignment(prev_score, reference)
+    return greedy_alignment(prev_score, reference, n)
 
 
 def map_greedy_alignment(example, match_n, optimization_attribute, lang):
@@ -110,6 +111,7 @@ def map_greedy_alignment(example, match_n, optimization_attribute, lang):
     # generate intermediate summary from greedy method that maximize ROUGE scores
     example["intermediate_summary"] = greedy_summary.sentences
     example["intermediate_summary_scores"] = greedy_summary.scores
+    example["n_gram"] = greedy_summary.n_gram
 
     return example
 
@@ -121,8 +123,8 @@ def extract_greedy_summaries(
     base_path: str,
     match_n: int = 2,
     optimization_attribute: str = "fmeasure",
-    lang="en",
-    num_proc=16,
+    lang: str = "en",
+    num_proc: int = 16,
 ):
     """
     The set of selected sentences is maximized with respect to the entire gold summary.
