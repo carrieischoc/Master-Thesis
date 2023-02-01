@@ -46,8 +46,11 @@ def check_split_feature(dataset, feature: str):
 
     # get nlp model - shouldn't disable lemma, tokenizer...
     # distinguish list of paragraphs from list of sentences
-    if dataset.features[feature]._type == "Sequence" and any(['section_level' in x for x in dataset.column_names]):
-        dataset = combine_into_string(dataset, feature)
+    if dataset.features[feature]._type == "Sequence":
+        for x in dataset.column_names:
+            if 'section_level' in x:
+                dataset = combine_into_string(dataset, feature)
+                dataset = dataset.remove_columns(x)
 
     # transform string to list of sentences
     if dataset.features[feature]._type == "Value":
