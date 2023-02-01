@@ -9,7 +9,7 @@ from .split import check_split_sent, check_combine_feature
 from summaries.utils import get_nlp_model
 
 
-def select_ds_column(dataset, col):
+def select_ds_column(dataset, col: str):
     col_all = dataset.column_names
     col_all.remove(col)
     dataset = dataset.remove_columns(col_all)

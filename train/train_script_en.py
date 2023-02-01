@@ -14,27 +14,6 @@ from LoadData import load_data, read_js
 from summaries.baselines import lexrank_st
 
 
-def get_args():
-
-    # get command arguments
-    parser = argparse.ArgumentParser(description="Get training parameters of datasets")
-    parser.add_argument("-d", "--dataset", nargs=1, type=str, help="name of dataset")
-    parser.add_argument("--split", nargs=1, type=str, help="split of dataset")
-    parser.add_argument(
-        "-p",
-        "--sample_propor",
-        nargs="?",
-        type=float,
-        const=1.0,
-        default=1.0,
-        help="proportion of samples",
-    )
-
-    args = parser.parse_args()
-
-    return args
-
-
 def get_seq2seq_args(debug: bool = False) -> Seq2SeqTrainingArguments:
     if debug:
         args = Seq2SeqTrainingArguments(
@@ -97,14 +76,6 @@ def get_seq2seq_args(debug: bool = False) -> Seq2SeqTrainingArguments:
         )
 
     return args
-
-
-def select_ds_column(dataset, col):
-    col_all = dataset.column_names
-    col_all.remove(col)
-    dataset = dataset.remove_columns(col_all)
-
-    return dataset
 
 
 if __name__ == "__main__":
