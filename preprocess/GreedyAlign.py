@@ -3,19 +3,12 @@ from typing import List, Counter, Union, NamedTuple
 from collections import namedtuple
 import numpy as np
 from rouge_score.rouge_scorer import _create_ngrams, _score_ngrams
-from datasets import Dataset, concatenate_datasets
+from datasets import Dataset
 from spacy.tokens import Span
 from spacy.language import Doc
-from .split import check_split_sent, check_combine_feature
 from summaries.utils import get_nlp_model
-
-
-def select_ds_column(dataset, col: str):
-    col_all = dataset.column_names
-    col_all.remove(col)
-    dataset = dataset.remove_columns(col_all)
-
-    return dataset
+from LoadData import load_data
+from .split import check_split_sent, check_combine_feature
 
 
 def compute_rouge_score(
@@ -118,7 +111,6 @@ def map_greedy_alignment(example, match_n, optimization_attribute, lang):
 
 
 def extract_greedy_summaries(
-    dataset,
     dataset_name: str,
     split: str,
     base_path: str,
@@ -126,6 +118,7 @@ def extract_greedy_summaries(
     optimization_attribute: str = "fmeasure",
     lang: str = "en",
     num_proc: int = 16,
+    sample_propor: float = 1.0
 ):
     """
     The set of selected sentences is maximized with respect to the entire gold summary.
@@ -140,14 +133,9 @@ def extract_greedy_summaries(
         try:
             path_list = os.path.join(base_path, dataset_name, split, "list_list_format")
             dataset_ls = Dataset.load_from_disk(path_list)
-            dataset_src_ls = select_ds_column(
-                dataset_ls, "source"
-            )  # list format of reference
-            dataset_tg_str = select_ds_column(
-                dataset, "target"
-            )  # str format of summary
-            dataset = concatenate_datasets([dataset_src_ls, dataset_tg_str], axis=1)
+            dataset = check_combine_feature(dataset_ls, "target")
         except FileNotFoundError:
+            dataset = load_data(dataset_name, split, sample_propor)
             # summary must be a string
             dataset = check_combine_feature(dataset, "target")
             # reference must be a list

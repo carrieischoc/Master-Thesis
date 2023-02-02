@@ -22,7 +22,7 @@ def concatenate_datasets(
     Add old features columns from dataset2 to dataset1 with new feature names.
     """
 
-    for old_name, new_name in old_features, new_features:
+    for old_name, new_name in zip(old_features, new_features):
         dataset1 = dataset1.add_column(name=new_name, column=dataset2[old_name])
 
     return dataset1
