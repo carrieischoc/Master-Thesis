@@ -19,7 +19,7 @@ def extract_similar_summaries(
     match_n: int = 2,
     optimization_attribute: str = "fmeasure",
     num_proc: int = 16,
-    sample_propor: float = 1.0
+    sample_propor: float = 1.0,
 ):
     """
     Extract top n sentences similar to summary sentences from reference.

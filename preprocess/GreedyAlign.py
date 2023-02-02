@@ -118,7 +118,7 @@ def extract_greedy_summaries(
     optimization_attribute: str = "fmeasure",
     lang: str = "en",
     num_proc: int = 16,
-    sample_propor: float = 1.0
+    sample_propor: float = 1.0,
 ):
     """
     The set of selected sentences is maximized with respect to the entire gold summary.

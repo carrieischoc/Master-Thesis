@@ -28,6 +28,7 @@ def generate_length(
     dataset = dataset.map(len_map, fn_kwargs=map_dict, num_proc=num_proc)
     dataset.save_to_disk(path)
 
+
 if __name__ == "__main__":
 
     args = get_args()
