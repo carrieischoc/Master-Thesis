@@ -1,3 +1,4 @@
+import os
 from typing import List, Counter, Union, NamedTuple
 from collections import namedtuple
 import numpy as np
@@ -131,16 +132,14 @@ def extract_greedy_summaries(
     """
 
     try:
-        dataset = Dataset.load_from_disk(
-            base_path + dataset_name + "/" + split + "/" + "list_str_format"
-        )
+        path_str = os.path.join(base_path, dataset_name, split, "list_str_format")
+        dataset = Dataset.load_from_disk(path_str)
 
     except FileNotFoundError:
         # try to make use of results in oracle alignment
         try:
-            dataset_ls = Dataset.load_from_disk(
-                base_path + dataset_name + "/" + split + "/" + "list_list_format"
-            )
+            path_list = os.path.join(base_path, dataset_name, split, "list_list_format")
+            dataset_ls = Dataset.load_from_disk(path_list)
             dataset_src_ls = select_ds_column(
                 dataset_ls, "source"
             )  # list format of reference
@@ -154,9 +153,7 @@ def extract_greedy_summaries(
             # reference must be a list
             dataset = check_split_sent(dataset, ["source"])
 
-        dataset.save_to_disk(
-            base_path + dataset_name + "/" + split + "/" + "list_str_format"
-        )
+        dataset.save_to_disk(path_str)
 
     map_dict = {
         "match_n": match_n,

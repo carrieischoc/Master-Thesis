@@ -1,3 +1,4 @@
+import os
 from collections import namedtuple
 from typing import NamedTuple, List
 import operator
@@ -24,16 +25,13 @@ def extract_similar_summaries(
     """
 
     try:
-        dataset = Dataset.load_from_disk(
-            base_path + dataset_name + "/" + split + "/" + "list_list_format"
-        )
+        path = os.path.join(base_path, dataset_name, split, "list_list_format")
+        dataset = Dataset.load_from_disk(path)
 
     except FileNotFoundError:
         # check and generate ref[List], sum[List].
         dataset = check_split_sent(dataset, ["source", "target"])
-        dataset.save_to_disk(
-            base_path + dataset_name + "/" + split + "/" + "list_list_format"
-        )
+        dataset.save_to_disk(path)
 
     map_dict = {
         "top_n": top_n,

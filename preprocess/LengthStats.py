@@ -1,3 +1,4 @@
+import os
 from typing import List
 from datasets import Dataset
 
@@ -19,12 +20,9 @@ def generate_length(
 ):
 
     # Should first generate list_list format!
-    dataset = Dataset.load_from_disk(
-        base_path + dataset_name + "/" + split + "/" + "list_list_format"
-    )
+    path = os.path.join(base_path, dataset_name, split, "list_list_format")
+    dataset = Dataset.load_from_disk(path)
 
     map_dict = {"feature_name": feature_name}
     dataset = dataset.map(len_map, fn_kwargs=map_dict, num_proc=num_proc)
-    dataset.save_to_disk(
-        base_path + dataset_name + "/" + split + "/" + "list_list_format"
-    )
+    dataset.save_to_disk(path)

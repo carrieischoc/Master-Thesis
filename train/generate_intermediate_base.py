@@ -1,3 +1,4 @@
+import os
 from LoadData import load_data
 from preprocess.utils import base_path, get_args
 from preprocess import OracleAlign, GreedyAlign
@@ -24,15 +25,10 @@ def generate_intermediate_baselines(
             optimization_attribute=optimization_attribute,
             num_proc=num_process,
         )
-        dataset_intermediate.save_to_disk(
-            base_path
-            + args.dataset[0]
-            + "/"
-            + split
-            + "/baselines/"
-            + "intermediate_top"
-            + str(topn)
+        path = os.path.join(
+            base_path, args.dataset[0], split, f"baselines/intermediate_top{str(topn)}"
         )
+        dataset_intermediate.save_to_disk(path)
 
     elif method == "greedy":  # make sure the format of reference/summary: list/str
 
@@ -44,14 +40,10 @@ def generate_intermediate_baselines(
             optimization_attribute=optimization_attribute,
             num_proc=num_process,
         )
-        dataset_intermediate.save_to_disk(
-            base_path
-            + args.dataset[0]
-            + "/"
-            + split
-            + "/baselines/"
-            + "intermediate_greedy"
+        path = os.path.join(
+            base_path, dataset_name, split, "baselines/intermediate_greedy"
         )
+        dataset_intermediate.save_to_disk(path)
 
 
 if __name__ == "__main__":

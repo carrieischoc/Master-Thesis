@@ -1,7 +1,7 @@
+import os
 import random
 from typing import List
 import numpy as np
-from operator import itemgetter
 from datasets import Dataset
 from preprocess.utils import base_path, get_args
 
@@ -52,14 +52,10 @@ def filter_length_oracle(
     else:
 
         # load the concatenated version
-        dataset = Dataset.load_from_disk(
-            base_path
-            + dataset_name
-            + "/"
-            + split
-            + "/baselines/"
-            + f"intermediate_top_concat"
+        path_concat = os.path.join(
+            base_path, dataset_name, split, "baselines/intermediate_top_concat"
         )
+        dataset = Dataset.load_from_disk(path_concat)
 
         map_dict = {"filter_method": filter_method, "m_mul": m_mul, "n_add": n_add}
         dataset = dataset.map(map_filter_method, fn_kwargs=map_dict, num_proc=num_proc)
@@ -71,14 +67,13 @@ def filter_length_oracle(
             f"intermediate_summary_scores_m{str(m_mul)}_n{str(n_add)}",
         ]
         dataset = select_ds_column(dataset, col_names)
-        dataset.save_to_disk(
-            base_path
-            + dataset_name
-            + "/"
-            + split
-            + "/baselines/"
-            + f"intermediate_top_m{str(m_mul)}_n{str(n_add)}"
+        path_save = os.path.join(
+            base_path,
+            dataset_name,
+            split,
+            f"baselines/intermediate_top_m{str(m_mul)}_n{str(n_add)}",
         )
+        dataset.save_to_disk(path_save)
 
 
 def map_filter_method(example, filter_method, m_mul, n_add):
@@ -128,34 +123,27 @@ def concat_ds_to_max(
         "intermediate_summary_pos",
         "intermediate_summary_scores",
     ]
-    dataset_concat = Dataset.load_from_disk(
-        base_path + dataset_name + "/" + split + "/baselines/" + "intermediate_top1"
+    path_load = os.path.join(
+        base_path, dataset_name, split, "baselines/intermediate_top1"
     )
+    dataset_concat = Dataset.load_from_disk(path_load)
     for fe in old_features:
         dataset_concat = dataset_concat.rename_column(fe, f"{fe}1")
     for i in range(2, max_multiplication + 1):
         dataset1 = dataset_concat
-        dataset2 = Dataset.load_from_disk(
-            base_path
-            + dataset_name
-            + "/"
-            + split
-            + "/baselines/"
-            + f"intermediate_top{str(i)}"
+        path_load = os.path.join(
+            base_path, dataset_name, split, f"baselines/intermediate_top{str(i)}"
         )
+        dataset2 = Dataset.load_from_disk(path_load)
         new_features = [fe + str(i) for fe in old_features]
         dataset_concat = concatenate_datasets(
             dataset1, dataset2, old_features, new_features
         )
 
-    dataset_concat.save_to_disk(
-        base_path
-        + dataset_name
-        + "/"
-        + split
-        + "/baselines/"
-        + f"intermediate_top_concat"
+    path_save = os.path.join(
+        base_path, dataset_name, split, "baselines/intermediate_top_concat"
     )
+    dataset_concat.save_to_disk(path_save)
 
 
 if __name__ == "__main__":
