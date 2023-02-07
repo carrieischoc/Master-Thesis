@@ -1,3 +1,4 @@
+import os
 from collections import namedtuple
 from typing import NamedTuple, List
 import operator
@@ -5,12 +6,12 @@ import heapq
 import numpy as np
 from datasets import Dataset
 from rouge_score.rouge_scorer import _create_ngrams, _score_ngrams
-from .split import check_split_sent
 from summaries.utils import get_nlp_model
+from .split import check_split_sent
+from LoadData import load_data
 
 
 def extract_similar_summaries(
-    dataset,
     dataset_name: str,
     split: str,
     base_path: str,
@@ -18,22 +19,21 @@ def extract_similar_summaries(
     match_n: int = 2,
     optimization_attribute: str = "fmeasure",
     num_proc: int = 16,
+    sample_propor: float = 1.0,
 ):
     """
     Extract top n sentences similar to summary sentences from reference.
     """
 
     try:
-        dataset = Dataset.load_from_disk(
-            base_path + dataset_name + "/" + split + "/" + "list_list_format"
-        )
+        path = os.path.join(base_path, dataset_name, split, "list_list_format")
+        dataset = Dataset.load_from_disk(path)
 
     except FileNotFoundError:
         # check and generate ref[List], sum[List].
+        dataset = load_data(dataset_name, split, sample_propor)
         dataset = check_split_sent(dataset, ["source", "target"])
-        dataset.save_to_disk(
-            base_path + dataset_name + "/" + split + "/" + "list_list_format"
-        )
+        dataset.save_to_disk(path)
 
     map_dict = {
         "top_n": top_n,
