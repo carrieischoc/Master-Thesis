@@ -7,8 +7,9 @@ import numpy as np
 from datasets import Dataset
 from rouge_score.rouge_scorer import _create_ngrams, _score_ngrams
 from summaries.utils import get_nlp_model
-from .split import check_split_sent
 from LoadData import load_data
+from .split import check_split_sent
+
 
 
 def extract_similar_summaries(
@@ -57,6 +58,7 @@ def top_rouges_n_match(
     Compasions are carried out between ref[List] and sum[List].
     """
 
+    # it's faster than passing nlp model as arguments.
     # get nlp model - shouldn't disable lemma, tokenizer...
     nlp = get_nlp_model(size="sm", disable=("ner",), lang="en")
     # get doc format (spacy) of summary and reference
@@ -90,13 +92,17 @@ def top_rouges_n_match(
         ]
 
         # use heapq to sort (for long lists)
-        topn = heapq.nlargest(top_n, enumerate(score), key=operator.itemgetter(1))
-        similar_sentences.indices += list(zip(*topn))[0]
-        similar_sentences.scores += list(zip(*topn))[1]
+        # topn = heapq.nlargest(top_n, enumerate(score), key=operator.itemgetter(1))
+        # similar_sentences.indices += list(zip(*topn))[0]
+        # similar_sentences.scores += list(zip(*topn))[1]
+        # remove duplicate indices and keep a replacement
+        indices = list(set(np.argsort(score))-set(similar_sentences.indices))[-top_n:]
+        similar_sentences.indices += indices
+        similar_sentences.scores += list(np.array(score)[indices])
 
-    # sort and remove duplicate indices to make summaries consistent
+    # sort to make summaries consistent
     sorted_scores = sorted(
-        zip(set(similar_sentences.indices), similar_sentences.scores)
+        zip(similar_sentences.indices, similar_sentences.scores)
     )
     similar_sentences.indices = np.array(sorted_scores)[:, 0].astype(int)
     similar_sentences.scores = np.array(sorted_scores)[:, 1]
