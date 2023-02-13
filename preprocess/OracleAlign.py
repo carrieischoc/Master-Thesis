@@ -9,7 +9,6 @@ from LoadData import load_data
 from .split import check_split_sent
 
 
-
 def extract_similar_summaries(
     dataset_name: str,
     split: str,
@@ -94,14 +93,14 @@ def top_rouges_n_match(
         # similar_sentences.indices += list(zip(*topn))[0]
         # similar_sentences.scores += list(zip(*topn))[1]
         # remove duplicate indices and keep a replacement
-        indices = list(set(np.argsort(score))-set(similar_sentences.indices))[-top_n:]
+        # set() is unordered and can change the order.
+        # replace set with np.delete
+        indices = list(np.delete(np.argsort(score), similar_sentences.indices))[-top_n:]
         similar_sentences.indices += indices
         similar_sentences.scores += list(np.array(score)[indices])
 
     # sort to make summaries consistent
-    sorted_scores = sorted(
-        zip(similar_sentences.indices, similar_sentences.scores)
-    )
+    sorted_scores = sorted(zip(similar_sentences.indices, similar_sentences.scores))
     similar_sentences.indices = np.array(sorted_scores)[:, 0].astype(int)
     similar_sentences.scores = np.array(sorted_scores)[:, 1]
 

@@ -74,7 +74,7 @@ def map_filter_oracle(example, filter_method):
     if example["len_ratio"] < 1:
         L = example["L"]
         target_len = example["target_len"]
-        m_mul = int(L / target_len)
+        m_mul = L // target_len  # integer
         n_add = L - m_mul * target_len
 
         # n=1, L is either 2 or 3; or no need to compute extra candidates
@@ -99,6 +99,7 @@ def map_filter_oracle(example, filter_method):
             # indices in the extended list
             extend_list_len = len(extend_list)
             duplicates_indices = [extend_list.index(item) for item in original_list]
+            # set() is unordered and can change the order.
             diff_indices = list(set(range(extend_list_len)) - set(duplicates_indices))
 
             # select candidates to delete according to either score or random
@@ -188,7 +189,7 @@ def filter_out_indices(
     if drop_ratio == True:
         indices_to_drop += list(df.index[df.loc[:, "len_ratio"] >= 0.5])
 
-    return list(set(indices_to_drop))
+    return list(set(indices_to_drop))  # set() is unordered and can change the order.
 
 
 if __name__ == "__main__":

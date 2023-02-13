@@ -95,11 +95,12 @@ def top_rouges_n_match(
         # similar_sentences.indices += list(zip(*topn))[0]
         # similar_sentences.scores += list(zip(*topn))[1]
         # remove duplicate indices and keep a replacement
+        sorted_indices = np.argsort(score)
         for i in range(len(top_n)):
 
-            indices = list(
-                set(np.argsort(score)) - set(similar_sentences_n[i].indices)
-            )[-top_n[i] :]
+            indices = list(np.delete(sorted_indices, similar_sentences_n[i].indices))[
+                -top_n[i] :
+            ]
             similar_sentences_n[i] = similar_sentences_n[i]._replace(
                 indices=similar_sentences_n[i].indices + indices,
                 scores=similar_sentences_n[i].scores + list(np.array(score)[indices]),
@@ -114,7 +115,8 @@ def top_rouges_n_match(
             indices=np.array(sorted_scores)[:, 0].astype(int),
             scores=np.array(sorted_scores)[:, 1],
             sentences=list(np.array(reference)[similar_sentences_n[i].indices]),
-            positions=np.array(similar_sentences_n[i].indices) / max(len(reference) - 1, 1),
+            positions=np.array(similar_sentences_n[i].indices)
+            / max(len(reference) - 1, 1),
         )
 
     return similar_sentences_n
@@ -134,8 +136,12 @@ def map_top_rouges_n_match(example, top_n, match_n, optimization_attribute):
     # transform all examples into list of sentences
     for i in range(len(top_n)):
         example[f"intermediate_summary{str(i+1)}"] = similar_sentences_n[i].sentences
-        example[f"intermediate_summary_scores{str(i+1)}"] = similar_sentences_n[i].scores
-        example[f"intermediate_summary_pos{str(i+1)}"] = similar_sentences_n[i].positions
+        example[f"intermediate_summary_scores{str(i+1)}"] = similar_sentences_n[
+            i
+        ].scores
+        example[f"intermediate_summary_pos{str(i+1)}"] = similar_sentences_n[
+            i
+        ].positions
 
     return example
 
