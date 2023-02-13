@@ -46,8 +46,8 @@ def filter_length_oracle(
         base_path, dataset_name, split, "baselines/intermediate_top_concat"
     )
     dataset = Dataset.load_from_disk(path_concat)
-    map_dict = {"filter_method":filter_method}
-    
+    map_dict = {"filter_method": filter_method}
+
     dataset = dataset.map(map_filter_oracle, fn_kwargs=map_dict, num_proc=num_proc)
 
     # save only selected features with target
@@ -55,6 +55,7 @@ def filter_length_oracle(
         "intermediate_summary",
         "intermediate_summary_pos",
         "intermediate_summary_scores",
+        "source",
         "target",
     ]
     dataset = select_ds_column(dataset, col_names)
@@ -70,21 +71,27 @@ def filter_length_oracle(
 def map_filter_oracle(example, filter_method):
 
     # Ignore examples with the ratio (summary/reference sentence length) >=1.
-    if example["len_ratio"]<1:
+    if example["len_ratio"] < 1:
         L = example["L"]
         target_len = example["target_len"]
-        m_mul = int(L/target_len)
-        n_add = L-m_mul*target_len
+        m_mul = int(L / target_len)
+        n_add = L - m_mul * target_len
 
         # n=1, L is either 2 or 3; or no need to compute extra candidates
-        if target_len==1 or n_add==0:
+        if target_len == 1 or n_add == 0:
 
-            example["intermediate_summary"] = example[f"intermediate_summary{str(m_mul)}"]
-            example["intermediate_summary_scores"] = example[f"intermediate_summary_scores{str(m_mul)}"]
-            example["intermediate_summary_pos"] = example[f"intermediate_summary_pos{str(m_mul)}"]
+            example["intermediate_summary"] = example[
+                f"intermediate_summary{str(m_mul)}"
+            ]
+            example["intermediate_summary_scores"] = example[
+                f"intermediate_summary_scores{str(m_mul)}"
+            ]
+            example["intermediate_summary_pos"] = example[
+                f"intermediate_summary_pos{str(m_mul)}"
+            ]
 
         else:
-        
+
             # Compute the indices of duplicates between length*m and length*(m+1)
             original_list = example[f"intermediate_summary{str(m_mul)}"]
             extend_list = example[f"intermediate_summary{str(m_mul+1)}"]
@@ -136,11 +143,11 @@ def concat_ds_to_max(
         "intermediate_summary_pos",
         "intermediate_summary_scores",
     ]
-    path_load = os.path.join(
-        base_path, dataset_name, split, "list_list_format"
-    )
+    path_load = os.path.join(base_path, dataset_name, split, "list_list_format")
     dataset_concat = Dataset.load_from_disk(path_load)
-    dataset_concat = select_ds_column(dataset_concat, ["L","len_ratio","target_len","target"])
+    dataset_concat = select_ds_column(
+        dataset_concat, ["L", "len_ratio", "target_len", "target"]
+    )
 
     for i in range(1, max_multiplication + 1):
         dataset1 = dataset_concat
@@ -158,25 +165,28 @@ def concat_ds_to_max(
     )
     dataset_concat.save_to_disk(path_save)
 
-def filter_out_indices(dataset_name: str, split: str, base_path: str, drop_ratio: bool = False):
-    '''
+
+def filter_out_indices(
+    dataset_name: str, split: str, base_path: str, drop_ratio: bool = False
+):
+    """
     Generate a list of indices to be filtered out with indices by certain criterias.
-    '''
+    """
     path = os.path.join(base_path, dataset_name, split, "list_list_format")
     dataset = Dataset.load_from_disk(path)
     df = dataset.to_pandas()
 
-    #Filter out examples with the ratio (summary/reference sentence length) >=1.
-    indices_to_drop = list(df.index[df.loc[:, 'len_ratio'] >= 1])
+    # Filter out examples with the ratio (summary/reference sentence length) >=1.
+    indices_to_drop = list(df.index[df.loc[:, "len_ratio"] >= 1])
 
     # Filter out examples that are probably a list.
-    df["source"]=df["source"].str.join("")
-    indices_to_drop+=list(df.index[df["source"].str.count(" - ")>5])
-    indices_to_drop+=list(df.index[df["source"].str.count(" / ")>5])
+    df["source"] = df["source"].str.join("")
+    indices_to_drop += list(df.index[df["source"].str.count(" - ") > 5])
+    indices_to_drop += list(df.index[df["source"].str.count(" / ") > 5])
 
     # Filter out examples whose ratio is greater than and equal to 0.5
     if drop_ratio == True:
-        indices_to_drop += list(df.index[df.loc[:, 'len_ratio'] >= 0.5])
+        indices_to_drop += list(df.index[df.loc[:, "len_ratio"] >= 0.5])
 
     return list(set(indices_to_drop))
 
@@ -186,5 +196,7 @@ if __name__ == "__main__":
     args = get_args()
 
     # concatenate top-ns dataset -> intermediate_summary_top(n)
-    concat_ds_to_max(args.dataset[0], args.split[0], base_path, max_multiplication=3)
-    filter_length_oracle(args.dataset[0], args.split[0], base_path,filter_method=args.method[0])
+    # concat_ds_to_max(args.dataset[0], args.split[0], base_path, max_multiplication=3)
+    filter_length_oracle(
+        args.dataset[0], args.split[0], base_path, filter_method=args.method[0]
+    )
