@@ -142,6 +142,9 @@ def map_top_rouges_n_match(example, top_n, match_n, optimization_attribute):
         example[f"intermediate_summary_pos{str(i+1)}"] = similar_sentences_n[
             i
         ].positions
+        example[f"intermediate_summary_indices{str(i+1)}"] = similar_sentences_n[
+            i
+        ].indices
 
     return example
 

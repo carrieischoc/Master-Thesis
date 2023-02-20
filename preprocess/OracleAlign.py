@@ -130,5 +130,6 @@ def map_top_rouges_n_match(example, top_n, match_n, optimization_attribute):
     example["intermediate_summary"] = similar_sentences.sentences
     example["intermediate_summary_scores"] = similar_sentences.scores
     example["intermediate_summary_pos"] = similar_sentences.positions
+    example["intermediate_summary_indices"] = similar_sentences.indices
 
     return example
