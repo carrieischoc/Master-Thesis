@@ -6,14 +6,15 @@ from datasets import Dataset
 from rouge_score.rouge_scorer import _create_ngrams, _score_ngrams
 from summaries.utils import get_nlp_model
 from LoadData import load_data
-from .split import check_split_sent
+from preprocess.split import check_split_sent
+from preprocess.utils import base_path, get_args
 
 
 def extract_similar_summaries(
     dataset_name: str,
     split: str,
     base_path: str,
-    top_n: int = 3,
+    top_n: List[int] = [1],
     match_n: int = 2,
     optimization_attribute: str = "fmeasure",
     num_proc: int = 16,
@@ -46,10 +47,10 @@ def extract_similar_summaries(
 def top_rouges_n_match(
     summary: List[str],
     reference: List[str],
-    top_n: int = 3,
+    top_n: List[int] = [1],
     match_n: int = 2,
     optimization_attribute: str = "fmeasure",
-) -> NamedTuple:  # intermediate_summary: List[str]
+):  # intermediate_summary: List[str]
     """
     Based on summaries module.
     Compasions are carried out between ref[List] and sum[List].
@@ -65,8 +66,9 @@ def top_rouges_n_match(
     similar_sentences = namedtuple(
         "similar_sentences", "indices scores positions sentences"
     )
-    similar_sentences.indices = []
-    similar_sentences.scores = []
+    similar_sentences_n = []
+    for n in top_n:
+        similar_sentences_n.append(similar_sentences([], [], [], []))
 
     # generate reference n-grams
     reference_ngrams = [
@@ -93,28 +95,36 @@ def top_rouges_n_match(
         # similar_sentences.indices += list(zip(*topn))[0]
         # similar_sentences.scores += list(zip(*topn))[1]
         # remove duplicate indices and keep a replacement
-        # set() is unordered and can change the order.
-        # replace set with np.delete
-        indices = list(np.delete(np.argsort(score), similar_sentences.indices))[-top_n:]
-        similar_sentences.indices += indices
-        similar_sentences.scores += list(np.array(score)[indices])
+        sorted_indices = np.argsort(score)
+        for i in range(len(top_n)):
+
+            indices = list(np.delete(sorted_indices, similar_sentences_n[i].indices))[
+                -top_n[i] :
+            ]
+            similar_sentences_n[i] = similar_sentences_n[i]._replace(
+                indices=similar_sentences_n[i].indices + indices,
+                scores=similar_sentences_n[i].scores + list(np.array(score)[indices]),
+            )
 
     # sort to make summaries consistent
-    sorted_scores = sorted(zip(similar_sentences.indices, similar_sentences.scores))
-    similar_sentences.indices = np.array(sorted_scores)[:, 0].astype(int)
-    similar_sentences.scores = np.array(sorted_scores)[:, 1]
+    for i in range(len(top_n)):
+        sorted_scores = sorted(
+            zip(similar_sentences_n[i].indices, similar_sentences_n[i].scores)
+        )
+        similar_sentences_n[i] = similar_sentences_n[i]._replace(
+            indices=np.array(sorted_scores)[:, 0].astype(int),
+            scores=np.array(sorted_scores)[:, 1],
+            sentences=list(np.array(reference)[similar_sentences_n[i].indices]),
+            positions=np.array(similar_sentences_n[i].indices)
+            / max(len(reference) - 1, 1),
+        )
 
-    similar_sentences.sentences = list(np.array(reference)[similar_sentences.indices])
-    similar_sentences.positions = np.array(similar_sentences.indices) / max(
-        len(reference) - 1, 1
-    )
-
-    return similar_sentences
+    return similar_sentences_n
 
 
 def map_top_rouges_n_match(example, top_n, match_n, optimization_attribute):
 
-    similar_sentences = top_rouges_n_match(
+    similar_sentences_n = top_rouges_n_match(
         example["target"],
         example["source"],
         top_n,
@@ -124,8 +134,32 @@ def map_top_rouges_n_match(example, top_n, match_n, optimization_attribute):
 
     # generate intermediate summary from most similar sentences relative to target
     # transform all examples into list of sentences
-    example["intermediate_summary"] = similar_sentences.sentences
-    example["intermediate_summary_scores"] = similar_sentences.scores
-    example["intermediate_summary_pos"] = similar_sentences.positions
+    for i in range(len(top_n)):
+        example[f"intermediate_summary{str(i+1)}"] = similar_sentences_n[i].sentences
+        example[f"intermediate_summary_scores{str(i+1)}"] = similar_sentences_n[
+            i
+        ].scores
+        example[f"intermediate_summary_pos{str(i+1)}"] = similar_sentences_n[
+            i
+        ].positions
 
     return example
+
+
+if __name__ == "__main__":
+
+    args = get_args()
+    num_process = 16
+
+    dataset = extract_similar_summaries(
+        args.dataset[0],
+        args.split[0],
+        base_path,
+        optimization_attribute="recall",
+        top_n=[1, 2, 3],
+    )
+
+    path_save = os.path.join(
+        base_path, args.dataset[0], args.split[0], "baselines/intermediate_top_concat"
+    )
+    dataset.save_to_disk(path_save)

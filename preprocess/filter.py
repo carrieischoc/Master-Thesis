@@ -2,6 +2,7 @@ import os
 import random
 from typing import List
 import numpy as np
+import pandas as pd
 from datasets import Dataset
 from preprocess.utils import base_path, get_args
 
@@ -32,81 +33,101 @@ def filter_length_oracle(
     dataset_name: str,
     split: str,
     base_path: str,
-    m_mul: int,
-    n_add: int,
     filter_method: str,
     num_proc: int = 16,
 ):
     """
-    Only for the condition that n_add is not 0.
-    It doesn't provide process for exceptions, so you should comfirm the correct concatenate version first.
-    m_mul: multiplication coefficient of length.
-    n_add: addition coefficient of length.
+    L = n + round(3/n) + 1;
+    if L >= 0.5*source_len, L = n + 1.
     """
 
-    if n_add == 0:
+    # load the concatenated version
+    path_concat = os.path.join(
+        base_path, dataset_name, split, "baselines/intermediate_top_concat"
+    )
+    dataset = Dataset.load_from_disk(path_concat)
+    map_dict = {"filter_method": filter_method}
 
-        print("No need to filter!")
-        return
+    dataset = dataset.map(map_filter_oracle, fn_kwargs=map_dict, num_proc=num_proc)
+
+    # save only selected features with target
+    col_names = [
+        "intermediate_summary",
+        "intermediate_summary_pos",
+        "intermediate_summary_scores",
+        "source",
+        "target",
+    ]
+    dataset = select_ds_column(dataset, col_names)
+    path_save = os.path.join(
+        base_path,
+        dataset_name,
+        split,
+        f"baselines/intermediate_top_extended_{filter_method}",
+    )
+    dataset.save_to_disk(path_save)
+
+
+def map_filter_oracle(example, filter_method):
+
+    # Ignore examples with the ratio (summary/reference sentence length) >=1.
+    if example["len_ratio"] < 1:
+        L = example["L"]
+        target_len = example["target_len"]
+        m_mul = L // target_len  # integer
+        n_add = L - m_mul * target_len
+
+        # n=1, L is either 2 or 3; or no need to compute extra candidates
+        if target_len == 1 or n_add == 0:
+
+            example["intermediate_summary"] = example[
+                f"intermediate_summary{str(m_mul)}"
+            ]
+            example["intermediate_summary_scores"] = example[
+                f"intermediate_summary_scores{str(m_mul)}"
+            ]
+            example["intermediate_summary_pos"] = example[
+                f"intermediate_summary_pos{str(m_mul)}"
+            ]
+
+        else:
+
+            # Compute the indices of duplicates between length*m and length*(m+1)
+            original_list = example[f"intermediate_summary{str(m_mul)}"]
+            extend_list = example[f"intermediate_summary{str(m_mul+1)}"]
+            extend_list_scores = example[f"intermediate_summary_scores{str(m_mul+1)}"]
+            # indices in the extended list
+            extend_list_len = len(extend_list)
+            duplicates_indices = [extend_list.index(item) for item in original_list]
+            # set() is unordered and can change the order.
+            diff_indices = list(set(range(extend_list_len)) - set(duplicates_indices))
+
+            # select candidates to delete according to either score or random
+            # L = duplicates + keep; extend_len = (m+1)*target_len
+            # extended_len = duplicates + keep + drop
+            if filter_method == "oracle_score":
+                sorted_indices = np.argsort(extend_list_scores).tolist()
+                sorted_diff_indices = np.delete(sorted_indices, duplicates_indices)
+                drop_indices = sorted_diff_indices[: extend_list_len - L]
+
+            elif filter_method == "oracle_random":
+
+                drop_indices = random.sample(diff_indices, extend_list_len - L)
+
+            example["intermediate_summary"] = np.delete(
+                extend_list, drop_indices
+            ).tolist()
+            example["intermediate_summary_scores"] = np.delete(
+                extend_list_scores, drop_indices
+            ).tolist()
+            example["intermediate_summary_pos"] = np.delete(
+                example[f"intermediate_summary_pos{str(m_mul+1)}"], drop_indices
+            ).tolist()
 
     else:
-
-        # load the concatenated version
-        path_concat = os.path.join(
-            base_path, dataset_name, split, "baselines/intermediate_top_concat"
-        )
-        dataset = Dataset.load_from_disk(path_concat)
-
-        map_dict = {"filter_method": filter_method, "m_mul": m_mul, "n_add": n_add}
-        dataset = dataset.map(map_filter_method, fn_kwargs=map_dict, num_proc=num_proc)
-
-        # save only selected features with target
-        col_names = [
-            f"intermediate_summary_m{str(m_mul)}_n{str(n_add)}",
-            f"intermediate_summary_pos_m{str(m_mul)}_n{str(n_add)}"
-            f"intermediate_summary_scores_m{str(m_mul)}_n{str(n_add)}",
-        ]
-        dataset = select_ds_column(dataset, col_names)
-        path_save = os.path.join(
-            base_path,
-            dataset_name,
-            split,
-            f"baselines/intermediate_top_m{str(m_mul)}_n{str(n_add)}",
-        )
-        dataset.save_to_disk(path_save)
-
-
-def map_filter_method(example, filter_method, m_mul, n_add):
-
-    # Compute the indices of duplicates between length*m and length*(m+1)
-    original_list = example[f"intermediate_summary{str(m_mul)}"]
-    extend_list = example[f"intermediate_summary{str(m_mul+1)}"]
-    extend_list_scores = example[f"intermediate_summary_scores{str(m_mul+1)}"]
-    # indices in the extended list
-    extend_list_len = len(extend_list)
-    duplicates_indices = [extend_list.index(item) for item in original_list]
-    diff_indices = list(set(range(extend_list_len)) - set(duplicates_indices))
-
-    # select candidates to delete according to either score or random
-
-    if filter_method == "oracle_score":
-        sorted_indices = np.argsort(extend_list_scores).tolist()
-        sorted_diff_indices = np.delete(sorted_indices, duplicates_indices)
-        selected_indices = sorted_diff_indices[: extend_list_len - n_add]
-
-    elif filter_method == "oracle_random":
-
-        selected_indices = random.sample(diff_indices, extend_list_len - n_add)
-
-    example[f"intermediate_summary_m{str(m_mul)}_n{str(n_add)}"] = np.delete(
-        extend_list, selected_indices
-    ).tolist()
-    example[f"intermediate_summary_scores_m{str(m_mul)}_n{str(n_add)}"] = np.delete(
-        extend_list_scores, selected_indices
-    ).tolist()
-    example[f"intermediate_summary_pos_m{str(m_mul)}_n{str(n_add)}"] = np.delete(
-        example[f"intermediate_summary_pos{str(m_mul+1)}"], selected_indices
-    ).tolist()
+        example["intermediate_summary"] = example["intermediate_summary1"]
+        example["intermediate_summary_scores"] = example["intermediate_summary_scores1"]
+        example["intermediate_summary_pos"] = example["intermediate_summary_pos1"]
 
     return example
 
@@ -123,13 +144,13 @@ def concat_ds_to_max(
         "intermediate_summary_pos",
         "intermediate_summary_scores",
     ]
-    path_load = os.path.join(
-        base_path, dataset_name, split, "baselines/intermediate_top1"
-    )
+    path_load = os.path.join(base_path, dataset_name, split, "list_list_format")
     dataset_concat = Dataset.load_from_disk(path_load)
-    for fe in old_features:
-        dataset_concat = dataset_concat.rename_column(fe, f"{fe}1")
-    for i in range(2, max_multiplication + 1):
+    dataset_concat = select_ds_column(
+        dataset_concat, ["L", "len_ratio", "target_len", "target"]
+    )
+
+    for i in range(1, max_multiplication + 1):
         dataset1 = dataset_concat
         path_load = os.path.join(
             base_path, dataset_name, split, f"baselines/intermediate_top{str(i)}"
@@ -146,9 +167,37 @@ def concat_ds_to_max(
     dataset_concat.save_to_disk(path_save)
 
 
+def filter_out_indices(
+    dataset_name: str, split: str, base_path: str, drop_ratio: bool = False
+):
+    """
+    Generate a list of indices to be filtered out with indices by certain criterias.
+    """
+    path = os.path.join(base_path, dataset_name, split, "list_list_format")
+    dataset = Dataset.load_from_disk(path)
+    df = dataset.to_pandas()
+
+    # Filter out examples with the ratio (summary/reference sentence length) >=1.
+    indices_to_drop = list(df.index[df.loc[:, "len_ratio"] >= 1])
+
+    # Filter out examples that are probably a list.
+    df["source"] = df["source"].str.join("")
+    indices_to_drop += list(df.index[df["source"].str.count(" - ") > 5])
+    indices_to_drop += list(df.index[df["source"].str.count(" / ") > 5])
+
+    # Filter out examples whose ratio is greater than and equal to 0.5
+    if drop_ratio == True:
+        indices_to_drop += list(df.index[df.loc[:, "len_ratio"] >= 0.5])
+
+    return list(set(indices_to_drop))  # set() is unordered and can change the order.
+
+
 if __name__ == "__main__":
 
     args = get_args()
 
     # concatenate top-ns dataset -> intermediate_summary_top(n)
-    concat_ds_to_max(args.dataset[0], args.split[0], base_path, max_multiplication=3)
+    # concat_ds_to_max(args.dataset[0], args.split[0], base_path, max_multiplication=3)
+    filter_length_oracle(
+        args.dataset[0], args.split[0], base_path, filter_method=args.method[0]
+    )
