@@ -94,8 +94,11 @@ def top_rouges_n_match(
         # similar_sentences.scores += list(zip(*topn))[1]
         # remove duplicate indices and keep a replacement
         # set() is unordered and can change the order.
-        # replace set with np.delete
-        indices = list(np.delete(np.argsort(score), similar_sentences.indices))[-top_n:]
+        # replace set with np.in1d
+        sorted_indices = np.argsort(score)
+        indices = list(
+            sorted_indices[~np.in1d(sorted_indices, similar_sentences.indices)]
+        )[-top_n:]
         similar_sentences.indices += indices
         similar_sentences.scores += list(np.array(score)[indices])
 
