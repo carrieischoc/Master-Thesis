@@ -55,6 +55,7 @@ def filter_length_oracle(
         "intermediate_summary",
         "intermediate_summary_pos",
         "intermediate_summary_scores",
+        "intermediate_summary_indices",
         "source",
         "target",
     ]
@@ -89,6 +90,9 @@ def map_filter_oracle(example, filter_method):
             example["intermediate_summary_pos"] = example[
                 f"intermediate_summary_pos{str(m_mul)}"
             ]
+            example["intermediate_summary_indices"] = example[
+                f"intermediate_summary_indices{str(m_mul)}"
+            ]
 
         else:
 
@@ -98,17 +102,24 @@ def map_filter_oracle(example, filter_method):
             extend_list_scores = example[f"intermediate_summary_scores{str(m_mul+1)}"]
             # indices in the extended list
             extend_list_len = len(extend_list)
-            duplicates_indices = [extend_list.index(item) for item in original_list]
+
+            # cause errors if item not in origianl_list
+            # duplicates_indices = [extend_list.index(item) for item in original_list]
             # set() is unordered and can change the order.
-            diff_indices = list(set(range(extend_list_len)) - set(duplicates_indices))
+            duplicates = np.in1d(extend_list, original_list)
+            duplicates_indices = list(np.where(duplicates == True)[0])
+            diff_indices = list(np.where(duplicates == False)[0])
 
             # select candidates to delete according to either score or random
             # L = duplicates + keep; extend_len = (m+1)*target_len
             # extended_len = duplicates + keep + drop
+            # np.delete is used to delete a certain slice, not a sublist!
             if filter_method == "oracle_score":
-                sorted_indices = np.argsort(extend_list_scores).tolist()
-                sorted_diff_indices = np.delete(sorted_indices, duplicates_indices)
-                drop_indices = sorted_diff_indices[: extend_list_len - L]
+                sorted_indices = np.argsort(extend_list_scores)
+                # sorted_diff_indices = np.delete(sorted_indices, duplicates_indices)
+                drop_indices = sorted_indices[
+                    ~np.in1d(sorted_indices, duplicates_indices)
+                ][: extend_list_len - L]
 
             elif filter_method == "oracle_random":
 
@@ -123,11 +134,15 @@ def map_filter_oracle(example, filter_method):
             example["intermediate_summary_pos"] = np.delete(
                 example[f"intermediate_summary_pos{str(m_mul+1)}"], drop_indices
             ).tolist()
+            example["intermediate_summary_indices"] = np.delete(
+                example[f"intermediate_summary_indices{str(m_mul+1)}"], drop_indices
+            ).tolist()
 
     else:
         example["intermediate_summary"] = example["intermediate_summary1"]
         example["intermediate_summary_scores"] = example["intermediate_summary_scores1"]
         example["intermediate_summary_pos"] = example["intermediate_summary_pos1"]
+        example["intermediate_summary_indices"] = example["intermediate_summary_indices1"]
 
     return example
 

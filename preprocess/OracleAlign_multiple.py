@@ -94,13 +94,13 @@ def top_rouges_n_match(
         # topn = heapq.nlargest(top_n, enumerate(score), key=operator.itemgetter(1))
         # similar_sentences.indices += list(zip(*topn))[0]
         # similar_sentences.scores += list(zip(*topn))[1]
-        # remove duplicate indices and keep a replacement
+        # remove duplicate indices and keep a replacement (don't use np.delete)
         sorted_indices = np.argsort(score)
         for i in range(len(top_n)):
 
-            indices = list(np.delete(sorted_indices, similar_sentences_n[i].indices))[
-                -top_n[i] :
-            ]
+            indices = list(
+                sorted_indices[~np.in1d(sorted_indices, similar_sentences_n[i].indices)]
+            )[-top_n[i] :]
             similar_sentences_n[i] = similar_sentences_n[i]._replace(
                 indices=similar_sentences_n[i].indices + indices,
                 scores=similar_sentences_n[i].scores + list(np.array(score)[indices]),
@@ -142,6 +142,9 @@ def map_top_rouges_n_match(example, top_n, match_n, optimization_attribute):
         example[f"intermediate_summary_pos{str(i+1)}"] = similar_sentences_n[
             i
         ].positions
+        example[f"intermediate_summary_indices{str(i+1)}"] = similar_sentences_n[
+            i
+        ].indices
 
     return example
 
