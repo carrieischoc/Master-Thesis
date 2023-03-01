@@ -4,3 +4,6 @@ data/testdata.ipynb
 
 # Particular experiment files
 data/GEM/
+
+# ignore the bertsum
+extraction/bertsum_intermediate.py

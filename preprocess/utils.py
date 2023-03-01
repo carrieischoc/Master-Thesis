@@ -35,11 +35,6 @@ def get_args():
         default=1.0,
         help="proportion of samples",
     )
-    parser.add_argument("-shard_size", default=2000, type=int)
-    parser.add_argument('-min_nsents', default=3, type=int)
-    parser.add_argument('-max_nsents', default=100, type=int)
-    parser.add_argument('-min_src_ntokens', default=5, type=int)
-    parser.add_argument('-max_src_ntokens', default=200, type=int)
 
     args = parser.parse_args()
 

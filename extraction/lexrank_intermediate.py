@@ -12,6 +12,7 @@ def lexrank_extraction(
     dataset_name: str,
     split: str,
     base_path: str,
+    length_feature: str,
     sample_propor: float = 1.0,
 ):
 
@@ -28,15 +29,16 @@ def lexrank_extraction(
     if "target_len" not in dataset.features:
         dataset = generate_length(dataset_name, split, base_path, ["target"])
 
-    dataset = dataset.map(lexrank_map)
+    kwargs = {"length_feature": length_feature}
+    dataset = dataset.map(lexrank_map, fn_kwargs=kwargs)
     # save only lexrank results and target
     col_names = ["target", "intermediate_summary"]
     dataset = select_ds_column(dataset, col_names)
-    path = os.path.join(base_path, dataset_name, split, "extraction/lexrank")
+    path = os.path.join(base_path, dataset_name, split, f"extraction/lexrank_{length_feature}")
     dataset.save_to_disk(path)
 
 
-def lexrank_map(example):
+def lexrank_map(example, length_feature):
     """
     Use the model which show greatest performance on Sentence Embeddings, especially good for EN.
     Choose the gpu with id 1.
@@ -44,7 +46,7 @@ def lexrank_map(example):
     example["intermediate_summary"] = lexrank_st(
         example["source"],
         st_model="all-mpnet-base-v2",
-        num_sentences=example["target_len"],
+        num_sentences=example[length_feature],
         device=1,
     )
 
@@ -54,4 +56,5 @@ def lexrank_map(example):
 if __name__ == "__main__":
 
     args = get_args()
-    lexrank_extraction(args.dataset[0], args.split[0], base_path)
+    # length_feature: "L" or "target_len"
+    lexrank_extraction(args.dataset[0], args.split[0], base_path, length_feature="L")
