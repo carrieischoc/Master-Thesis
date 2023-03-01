@@ -123,7 +123,9 @@ def map_filter_oracle(example, filter_method):
 
             elif filter_method == "oracle_random":
 
-                drop_indices = random.sample(diff_indices, extend_list_len - L)
+                drop_indices = random.sample(
+                    diff_indices, min(extend_list_len - L, len(diff_indices))
+                )
 
             example["intermediate_summary"] = np.delete(
                 extend_list, drop_indices
@@ -142,7 +144,9 @@ def map_filter_oracle(example, filter_method):
         example["intermediate_summary"] = example["intermediate_summary1"]
         example["intermediate_summary_scores"] = example["intermediate_summary_scores1"]
         example["intermediate_summary_pos"] = example["intermediate_summary_pos1"]
-        example["intermediate_summary_indices"] = example["intermediate_summary_indices1"]
+        example["intermediate_summary_indices"] = example[
+            "intermediate_summary_indices1"
+        ]
 
     return example
 
@@ -214,5 +218,8 @@ if __name__ == "__main__":
     # concatenate top-ns dataset -> intermediate_summary_top(n)
     # concat_ds_to_max(args.dataset[0], args.split[0], base_path, max_multiplication=3)
     filter_length_oracle(
-        args.dataset[0], args.split[0], base_path, filter_method=args.method[0]
+        args.dataset[0],
+        args.split[0],
+        base_path,
+        filter_method=args.method[0],
     )
