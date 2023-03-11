@@ -57,4 +57,4 @@ if __name__ == "__main__":
 
     args = get_args()
     # length_feature: "L" or "target_len"
-    lexrank_extraction(args.dataset[0], args.split[0], base_path, length_feature="L")
+    lexrank_extraction(args.dataset[0], args.split[0], base_path, length_feature=args.method[0])

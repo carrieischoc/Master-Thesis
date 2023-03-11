@@ -13,7 +13,7 @@ def get_args():
         "--method",
         nargs=1,
         type=str,
-        choices=["oracle", "greedy", "oracle_score", "oracle_random", "lexrank"],
+        choices=["oracle", "greedy", "oracle_score", "oracle_random", "lexrank", "L", "target_len"],
         help="method of intermediate summary",
     )
     parser.add_argument(
@@ -35,6 +35,8 @@ def get_args():
         default=1.0,
         help="proportion of samples",
     )
+    parser.add_argument("--debug", default=True, type=bool)
+    parser.add_argument("--drop_ratio", default=False, type=bool)
 
     args = parser.parse_args()
 
