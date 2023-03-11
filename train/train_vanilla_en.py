@@ -13,14 +13,16 @@ from preprocess.filter import filter_out_indices
 
 
 def filter_out_dataset(dataset_name: str, split: str, base_path: str, drop_ratio: bool):
-    dataset = load_from_path(dataset_name, split,base_path, f"extraction/lexrank_{args.method[0]}")
-    ds_str = load_from_path(dataset_name, split,base_path,"list_str_format")
+    dataset = load_from_path(
+        dataset_name, split, base_path, f"extraction/lexrank_{args.method[0]}"
+    )
+    ds_str = load_from_path(dataset_name, split, base_path, "list_str_format")
     dataset = dataset.remove_columns("target")
     dataset = dataset.add_column(name="target", column=ds_str["target"])
     drop_indices = filter_out_indices(
         dataset_name, split, base_path, drop_ratio=drop_ratio
     )
-    
+
     dataset = dataset.filter(
         lambda example, indice: indice not in drop_indices, with_indices=True
     )
@@ -128,13 +130,13 @@ if __name__ == "__main__":
 
     def tokenize_function(example):
         # Tokenize the source and target sequences
-       return tokenizer(
-        text=example["intermediate_summary"],
-        text_target=example["target"],
-        padding="max_length",
-        truncation=True,
-        max_length=512
-    )
+        return tokenizer(
+            text=example["intermediate_summary"],
+            text_target=example["target"],
+            padding="max_length",
+            truncation=True,
+            max_length=512,
+        )
 
     # get the training arguments and dataset
     dataset, seq2seq_args = get_seq2seq_args(args)
