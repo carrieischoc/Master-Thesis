@@ -6,44 +6,15 @@ from transformers import (
     Seq2SeqTrainingArguments,
     DataCollatorForSeq2Seq,
 )
-from datasets import Dataset, DatasetDict
-from utils import load_from_path
+from utils import get_tokenized_dataset
 from preprocess.utils import base_path, get_args
-from preprocess.filter import filter_out_indices
-
-
-def filter_out_dataset(dataset_name: str, split: str, base_path: str, drop_ratio: bool):
-    dataset = load_from_path(
-        dataset_name, split, base_path, f"extraction/lexrank_{args.method[0]}"
-    )
-    ds_str = load_from_path(dataset_name, split, base_path, "list_str_format")
-    dataset = dataset.remove_columns("target")
-    dataset = dataset.add_column(name="target", column=ds_str["target"])
-    drop_indices = filter_out_indices(
-        dataset_name, split, base_path, drop_ratio=drop_ratio
-    )
-
-    dataset = dataset.filter(
-        lambda example, indice: indice not in drop_indices, with_indices=True
-    )
-    return dataset
 
 
 def get_seq2seq_args(args):
 
-    dataset_tr = filter_out_dataset(
-        args.dataset[0], "train", base_path, drop_ratio=args.drop_ratio
-    )
-    dataset_va = filter_out_dataset(
-        args.dataset[0], "validation", base_path, drop_ratio=args.drop_ratio
-    )
-
-    if args.debug:
-        # select the first 5% data to debug
-        dataset_tr = dataset_tr.select(range(int(dataset_tr.num_rows * 0.05)))
-        dataset_va = dataset_va.select(range(int(dataset_va.num_rows * 0.05)))
+    if args.debug == True:
         path = os.path.join(
-            base_path, args.dataset[0], f"models/debug/vanilla_{args.method[0]}"
+            base_path, args.dataset[0], f"models/debug/vanilla/{args.option[0]}"
         )
         seq2seq_args = Seq2SeqTrainingArguments(
             output_dir=path,  # ./path/to/checkpoint
@@ -60,12 +31,13 @@ def get_seq2seq_args(args):
             eval_accumulation_steps=16,
             # eval_delay=0.5, # Number of epochs/steps to wait for before promising convergence
             learning_rate=5e-5,  # The initial learning rate, default
-            num_train_epochs=1000,
+            num_train_epochs=10,
             lr_scheduler_type="constant",  # constant learning rate
             warmup_steps=50,  # roughly equivalent to 1/6 of the first epoch
             logging_strategy="steps",
             logging_steps=50,
-            save_strategy="no",
+            save_strategy="steps",
+            save_steps=250,
             seed=1123,  # produces the same results
             data_seed=512,  # different from seed, try different values to help avoid overfitting
             # Whether to use bf16 16-bit (mixed) precision training instead of 32-bit training
@@ -78,7 +50,7 @@ def get_seq2seq_args(args):
         path = os.path.join(
             base_path,
             args.dataset[0],
-            f"models/vanilla_{args.method[0]}_{str(args.drop_ratio)}",
+            f"models/vanilla/{args.option[0]}_{str(args.drop_ratio)}",
         )
         seq2seq_args = Seq2SeqTrainingArguments(
             output_dir=path,
@@ -92,11 +64,11 @@ def get_seq2seq_args(args):
             # per_device_eval_batch_size=8,
             gradient_accumulation_steps=4,  # a large value needs more memory
             eval_accumulation_steps=16,
-            eval_delay=2,  # try different values to earn more meaningful representations before the evaluation
+            eval_delay=0.5,  # evaluate after training half epoch
             learning_rate=5e-5,
             num_train_epochs=5,  # increase the number gradually until the model stops improving
             # lr_scheduler_type="linear", # defaults to "linear"
-            warmup_steps=5000,  # roughly equivalent to 1/6 of the first epoch
+            warmup_steps=40000,  # 10% of the training steps
             logging_strategy="steps",
             logging_steps=250,
             save_strategy="epoch",  # Save is done at the end of each epoch.
@@ -109,46 +81,47 @@ def get_seq2seq_args(args):
             gradient_checkpointing=False,
         )
 
-    dataset = DatasetDict({"train": dataset_tr, "validation": dataset_va})
-    return dataset, seq2seq_args
+    return seq2seq_args
 
 
 if __name__ == "__main__":
 
     args = get_args()
-    dataset, seq2seq_args = get_seq2seq_args(args)
-
     # adapted from Dennis summaries library
+    seq2seq_args = get_seq2seq_args(args)
+
     # Load the pre-trained model and tokenizer
     model_name = "google/mt5-base"
-    max_input_length = 512
     # don't use a Rust-based tokenizer
     tokenizer = AutoTokenizer.from_pretrained(
-        model_name, model_max_length=max_input_length, use_fast=False
+        model_name, model_max_length=512, use_fast=False
     )
     model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
+    # get the training arguments
+    seq2seq_args = get_seq2seq_args(args)
 
-    def tokenize_function(example):
-        # Tokenize the source and target sequences
-        return tokenizer(
-            text=example["intermediate_summary"],
-            text_target=example["target"],
-            padding="max_length",
-            truncation=True,
-            max_length=512,
-        )
+    max_input_length = 128
+    max_output_length = 128
+    dataset_va = get_tokenized_dataset(
+        tokenizer, base_path, args.dataset[0], "validation", options=args.option[0]
+    )
+    dataset_tr = get_tokenized_dataset(
+        tokenizer, base_path, args.dataset[0], "train", options=args.option[0]
+    )
 
-    # get the training arguments and dataset
-    dataset, seq2seq_args = get_seq2seq_args(args)
-    tokenized_dataset = dataset.map(tokenize_function, batched=True)
+    if args.debug == True:
+        # select 1000 exs to debug
+        dataset_tr = dataset_tr.select(range(1000))
+        dataset_va = dataset_va.select(range(100))
+
     data_collator = DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model)
 
     trainer = Seq2SeqTrainer(
         model=model,
         args=seq2seq_args,
         data_collator=data_collator,
-        train_dataset=tokenized_dataset["train"],
-        eval_dataset=tokenized_dataset["validation"],
+        train_dataset=dataset_tr,
+        eval_dataset=dataset_va,
         tokenizer=tokenizer,
         # optimizers=None,
         # preprocess_logits_for_metrics=None
