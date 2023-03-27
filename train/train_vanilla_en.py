@@ -86,6 +86,11 @@ def get_seq2seq_args(args):
 
 if __name__ == "__main__":
 
+    # args.option[0] "extraction/lexrank_target_len", "extraction/lexrank_L"
+    # "baselines/intermediate_greedy", "baselines/intermediate_top1",
+    # "baselines/intermediate_top_extended_oracle_random", 
+    # "baselines/intermediate_top_extended_oracle_score"
+
     args = get_args()
     # adapted from Dennis summaries library
     seq2seq_args = get_seq2seq_args(args)
@@ -100,13 +105,25 @@ if __name__ == "__main__":
     # get the training arguments
     seq2seq_args = get_seq2seq_args(args)
 
-    max_input_length = 128
+    max_input_length = 256
     max_output_length = 128
     dataset_va = get_tokenized_dataset(
-        tokenizer, base_path, args.dataset[0], "validation", options=args.option[0]
+        tokenizer,
+        base_path,
+        args.dataset[0],
+        "validation",
+        options=args.option[0],
+        max_input_length=max_input_length,
+        max_output_length=max_output_length,
     )
     dataset_tr = get_tokenized_dataset(
-        tokenizer, base_path, args.dataset[0], "train", options=args.option[0]
+        tokenizer,
+        base_path,
+        args.dataset[0],
+        "train",
+        options=args.option[0],
+        max_input_length=max_input_length,
+        max_output_length=max_output_length,
     )
 
     if args.debug == True:

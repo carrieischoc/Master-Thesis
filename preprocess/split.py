@@ -1,6 +1,13 @@
-from typing import List
-from summaries.utils import get_nlp_model
+from typing import List, Tuple
+import spacy
 
+def get_nlp_model(size: str, disable: Tuple[str] = ("ner",)):
+    model = "en_core_web_"
+    if size not in {"sm", "md", "lg"}:
+        raise ValueError("Incorrect size argument passed for language model!")
+    model += size
+
+    return spacy.load(model, disable=disable)
 
 def combine_into_string(dataset, feature: str):
     "Combine list into a string."
@@ -35,7 +42,7 @@ def check_combine_str(dataset, feature: List[str]):
 
 
 def split_into_sentences(dataset, feature: str):
-    nlp = get_nlp_model(size="sm", disable=("ner",), lang="en")
+    nlp = get_nlp_model(size="sm", disable=("ner",))
     dataset = dataset.map(
         lambda example: {feature: [sent.text for sent in nlp(example[feature]).sents]}
     )

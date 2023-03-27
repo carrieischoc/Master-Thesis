@@ -40,7 +40,10 @@ def get_tokenized_dataset(
     """
     try:
         dataset = load_from_path(
-            dataset_name, split, base_path, f"tokenized/{options}/{str(drop_ratio)}"
+            dataset_name,
+            split,
+            base_path,
+            f"tokenized/{options}/{str(drop_ratio)}_{str(max_input_length)}",
         )
     except FileNotFoundError:
         ds_str = load_from_path(dataset_name, split, base_path, "list_str_format")
@@ -99,7 +102,10 @@ def get_tokenized_dataset(
             remove_columns=["intermediate_summary", "target"],
         )
         save_path = os.path.join(
-            base_path, dataset_name, split, f"tokenized/{options}/{str(drop_ratio)}"
+            base_path,
+            dataset_name,
+            split,
+            f"tokenized/{options}/{str(drop_ratio)}_{str(max_input_length)}",
         )
         dataset.save_to_disk(save_path)
 
