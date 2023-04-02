@@ -14,7 +14,7 @@ def get_seq2seq_args(args):
 
     if args.debug == True:
         path = os.path.join(
-            base_path, args.dataset[0], f"models/debug/vanilla/{args.option[0]}"
+            base_path, args.dataset[0], f"models/debug/vanilla"
         )
         seq2seq_args = Seq2SeqTrainingArguments(
             output_dir=path,  # ./path/to/checkpoint
@@ -68,7 +68,7 @@ def get_seq2seq_args(args):
             learning_rate=5e-5,
             num_train_epochs=5,  # increase the number gradually until the model stops improving
             # lr_scheduler_type="linear", # defaults to "linear"
-            warmup_steps=40000,  # 10% of the training steps
+            warmup_steps=2000,  # 1% of the training steps
             logging_strategy="steps",
             logging_steps=250,
             save_strategy="epoch",  # Save is done at the end of each epoch.

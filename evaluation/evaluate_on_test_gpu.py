@@ -8,9 +8,6 @@ from preprocess.utils import base_path, get_args
 from preprocess.split import check_combine_feature
 from train.utils import load_from_path
 
-'''
-***************** No longer use it because it's too slow. *****************
-'''
 
 if __name__ == "__main__":
 
@@ -67,8 +64,8 @@ if __name__ == "__main__":
     ]
 
     def pred_map(example):
-        generated = model.generate(
-            input_ids=torch.tensor([example["input_ids"]]),
+        generated = model.generate( # move to gpu
+            input_ids=torch.tensor([example["input_ids"]]).to(device),
             # attention_mask=torch.tensor(example["attention_mask"]),
             max_length=128,
             num_beams=4,
@@ -77,14 +74,16 @@ if __name__ == "__main__":
         example["prediction"] = tokenizer.decode(generated[0], skip_special_tokens=True)
         return example
 
-    # device = 'cuda:0'
+    device = 'cuda'
     model = None
     for cp in checkpoints:
         if model is not None:
             del model
         model = AutoModelForSeq2SeqLM.from_pretrained(cp)
+        # move to gpu
+        model.to(device)
         dataset_pred = dataset.map(
             pred_map, remove_columns=["attention_mask", "input_ids"]
         )
-        output_dir = os.path.join(cp, "results")
+        output_dir = os.path.join(cp, "results_gpu")
         dataset_pred.save_to_disk(output_dir)

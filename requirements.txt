@@ -2,9 +2,15 @@
 numpy
 pandas
 tqdm
-datasets
 spacy
 seaborn
+rouge-score
+transformers>=4.15
+sentence-transformers
+datasets>=2.6.0
+accelerate
+torch
+matplotlib
 # install instructions wiht en_core_web_sm
 https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.5.0/en_core_web_sm-3.5.0.tar.gz#egg=en_core_web_sm
 
