@@ -15,7 +15,7 @@ if __name__ == "__main__":
 
     args = get_args()
     tokenize_model_name = "google/mt5-base"
-    input_max_length = 128
+    input_max_length = 256
     tokenizer = AutoTokenizer.from_pretrained(
         tokenize_model_name, model_max_length=input_max_length, use_fast=False
     )
@@ -30,10 +30,10 @@ if __name__ == "__main__":
         # initializing the decoder_input_ids with the padding token
         # decoder_input_ids = tokenizer('<pad>').input_ids
         return {
-                "input_ids": inputs["input_ids"],
-                "attention_mask": inputs["attention_mask"],
-                # "decoder_input_ids": decoder_input_ids,
-            }
+            "input_ids": inputs["input_ids"],
+            "attention_mask": inputs["attention_mask"],
+            # "decoder_input_ids": decoder_input_ids,
+        }
 
     try:
         dataset = load_from_path(
@@ -63,39 +63,34 @@ if __name__ == "__main__":
     path_to_checkpoint = os.path.join(
         base_path,
         args.dataset[0],
-        f"models/vanilla/{args.option[0]}_{str(args.drop_ratio)}",
+        f"models/vanilla/{args.option[0]}_{str(args.drop_ratio)}_256", # modify _length before run
     )
-    checkpoints = [
-        os.path.join(path_to_checkpoint, f)
-        for f in os.listdir(path_to_checkpoint)
-        if "checkpoint" in f
-    ]
+    # checkpoints = [
+    #     os.path.join(path_to_checkpoint, f)
+    #     for f in os.listdir(path_to_checkpoint)
+    #     if "checkpoint" in f
+    # ]
+    best_cp = "checkpoint-10"
+    cp = os.path.join(path_to_checkpoint, best_cp)
 
-    model = None
+    # model = None
+    # for cp in checkpoints:
+    #     if model is not None:
+    #         del model
+    model = AutoModelForSeq2SeqLM.from_pretrained(cp)
+    training_args = Seq2SeqTrainingArguments(
+        output_dir=os.path.join(cp, "predict"),
+        per_device_eval_batch_size=8,
+        predict_with_generate=True,
+    )
 
-    # def decode(example):
-    #     example["prediction"] = tokenizer.decode(
-    #         example["prediction"], skip_special_tokens=True
-    #     )
-    #     return example
-
-    for cp in checkpoints:
-        if model is not None:
-            del model
-        model = AutoModelForSeq2SeqLM.from_pretrained(cp)
-        training_args = Seq2SeqTrainingArguments(
-            per_device_eval_batch_size=8,
-            predict_with_generate=True,
-        )
-
-        trainer = Seq2SeqTrainer(model=model, args=training_args, tokenizer=tokenizer)
-        predictions = trainer.predict(dataset, max_length=128, num_beams=4, early_stopping=True)
-
-        # decoded_predictions = []
-        # for pred in predictions.predictions:
-        #     decoded_prediction = tokenizer.decode(pred, skip_special_tokens=True)
-        #     decoded_predictions.append(decoded_prediction)
-        decoded_predictions = tokenizer.batch_decode(predictions.predictions, skip_special_tokens=True)
-        dataset_pred = dataset.add_column("prediction", decoded_predictions)
-        dataset_pred = dataset_pred.remove_columns(["attention_mask", "input_ids"])
-        dataset_pred.save_to_disk(os.path.join(cp, "predict"))
+    trainer = Seq2SeqTrainer(model=model, args=training_args, tokenizer=tokenizer)
+    predictions = trainer.predict(
+        dataset, max_length=128, num_beams=2, early_stopping=True
+    )
+    decoded_predictions = tokenizer.batch_decode(
+        predictions.predictions, skip_special_tokens=True
+    )
+    dataset_pred = dataset.add_column("prediction", decoded_predictions)
+    dataset_pred = dataset_pred.remove_columns(["attention_mask", "input_ids"])
+    dataset_pred.save_to_disk(os.path.join(cp, "predict_2"))

@@ -59,6 +59,7 @@ def get_tokenized_dataset(
                 dataset_name, split, base_path, drop_ratio=drop_ratio
             )
             write_js(f"drop_indices_{str(drop_ratio)}", path, drop_indices)
+            
         dataset = dataset.filter(
             lambda example, indice: indice not in drop_indices, with_indices=True
         )

@@ -3,7 +3,7 @@ summaries_ca.egg-info/
 data/testdata.ipynb
 
 # Particular experiment files
-data/GEM/
+data/
 
 # ignore the bertsum
 extraction/bertsum_intermediate.py

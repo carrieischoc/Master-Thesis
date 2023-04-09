@@ -8,9 +8,9 @@ from preprocess.utils import base_path, get_args
 from preprocess.split import check_combine_feature
 from train.utils import load_from_path
 
-'''
+"""
 ***************** No longer use it because it's too slow. *****************
-'''
+"""
 
 if __name__ == "__main__":
 

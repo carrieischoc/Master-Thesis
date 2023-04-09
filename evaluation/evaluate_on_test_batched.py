@@ -9,9 +9,9 @@ from preprocess.utils import base_path, get_args
 from preprocess.split import check_combine_feature
 from train.utils import load_from_path
 
-'''
+"""
 ********** Not using it (cannot allocate enough memory for batches). **********
-'''
+"""
 
 if __name__ == "__main__":
 
@@ -90,7 +90,7 @@ if __name__ == "__main__":
         #         example["prediction"] = tokenizer.decode(generated[i], skip_special_tokens=True)
 
         # return batch
-        
+
         generated = model.generate(
             input_ids=torch.tensor(batch["input_ids"]),
             # attention_mask=torch.tensor(batch["attention_mask"]),
@@ -98,9 +98,11 @@ if __name__ == "__main__":
             num_beams=4,
             early_stopping=True,  # could set to True
         )
-        batch["prediction"] = tokenizer.batch_decode(generated, skip_special_tokens=True)
+        batch["prediction"] = tokenizer.batch_decode(
+            generated, skip_special_tokens=True
+        )
         return batch
-    
+
     model = None
     for cp in checkpoints:
         if model is not None:

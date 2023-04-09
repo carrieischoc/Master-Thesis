@@ -64,7 +64,7 @@ if __name__ == "__main__":
     ]
 
     def pred_map(example):
-        generated = model.generate( # move to gpu
+        generated = model.generate(  # move to gpu
             input_ids=torch.tensor([example["input_ids"]]).to(device),
             # attention_mask=torch.tensor(example["attention_mask"]),
             max_length=128,
@@ -74,7 +74,7 @@ if __name__ == "__main__":
         example["prediction"] = tokenizer.decode(generated[0], skip_special_tokens=True)
         return example
 
-    device = 'cuda'
+    device = "cuda"
     model = None
     for cp in checkpoints:
         if model is not None:
