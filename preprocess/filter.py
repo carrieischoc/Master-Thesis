@@ -1,10 +1,13 @@
 import os
 import random
+import json
 from typing import List
 import numpy as np
-import pandas as pd
 from datasets import Dataset
 from preprocess.utils import base_path, get_args
+from inspection import whitespace_token
+from preprocess.split import check_combine_str
+from train.utils import read_js
 
 
 def select_ds_column(dataset, col: List[str]):
@@ -187,26 +190,46 @@ def concat_ds_to_max(
 
 
 def filter_out_indices(
-    dataset_name: str, split: str, base_path: str, drop_ratio: bool = False
+    dataset_name: str, split: str, base_path: str, drop_ratio: bool = True
 ):
     """
     Generate a list of indices to be filtered out with indices by certain criterias.
     """
-    path = os.path.join(base_path, dataset_name, split, "list_list_format")
-    dataset = Dataset.load_from_disk(path)
-    df = dataset.to_pandas()
 
-    # Filter out examples with the ratio (summary/reference sentence length) >=1.
-    indices_to_drop = list(df.index[df.loc[:, "len_ratio"] >= 1])
+    try:
+        path1 = os.path.join(base_path, dataset_name, split, "str_str_format")
+        dataset = Dataset.load_from_disk(path1)
+    except:
+        path2 = os.path.join(base_path, dataset_name, split, "list_str_format")
+        dataset = Dataset.load_from_disk(path2)
+        dataset = check_combine_str(dataset, ["source"])
+        dataset.save_to_disk(path1)
+    df = dataset.to_pandas()
+    indices_to_drop = []
+
+    # Filter out examples with the ratio (summary/reference token numbers) > 0.5.
+    if drop_ratio == True:
+        try:
+            src = read_js(f"{base_path}/{split}_src_length.json")
+            tg = read_js(f"{base_path}/{split}_tg_length.json")
+        except:
+            stats_src = whitespace_token(df["source"])
+            stats_tg = whitespace_token(df["target"])
+            src = stats_src.lens.tolist()
+            tg = stats_tg.lens.tolist()
+            f = open(f"{split}_src_length.json", "w+")
+            json.dump(src, f)
+            f = open(f"{split}_tg_length.json", "w+")
+            json.dump(tg, f)
+        ratio = np.array(src) / np.array(tg)
+        ratio_indices = list(np.where(ratio > 0.5)[0])
+        indices_to_drop += ratio_indices
+
+    # indices_to_drop = list(df.index[df.loc[:, "len_ratio"] >= 1])
 
     # Filter out examples that are probably a list.
-    df["source"] = df["source"].str.join("")
     indices_to_drop += list(df.index[df["source"].str.count(" - ") > 5])
     indices_to_drop += list(df.index[df["source"].str.count(" / ") > 5])
-
-    # Filter out examples whose ratio is greater than and equal to 0.5
-    if drop_ratio == True:
-        indices_to_drop += list(df.index[df.loc[:, "len_ratio"] >= 0.5])
 
     return list(set(indices_to_drop))  # set() is unordered and can change the order.
 

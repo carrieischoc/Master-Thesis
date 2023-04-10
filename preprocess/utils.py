@@ -2,6 +2,16 @@ import argparse
 
 base_path = "/home/jli/working_dir/2022-jiahui-li-thesis/data/"
 
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+
 
 def get_args():
 
@@ -13,7 +23,7 @@ def get_args():
         "--method",
         nargs=1,
         type=str,
-        choices=["oracle", "greedy", "oracle_score", "oracle_random", "lexrank"],
+        choices=["oracle", "greedy", "oracle_score", "oracle_random", "lexrank", "L", "target_len"],
         help="method of intermediate summary",
     )
     parser.add_argument(
@@ -34,6 +44,22 @@ def get_args():
         const=1.0,
         default=1.0,
         help="proportion of samples",
+    )
+    parser.add_argument("--debug", default=True, type=str2bool)
+    parser.add_argument("--drop_ratio", default=False, type=str2bool)
+    parser.add_argument(
+        "--option",
+        nargs=1,
+        type=str,
+        choices=[
+        "extraction/lexrank_target_len",
+        "extraction/lexrank_L",
+        "baselines/intermediate_greedy",
+        "baselines/intermediate_top1",
+        "baselines/intermediate_top_extended_oracle_random",
+        "baselines/intermediate_top_extended_oracle_score",
+    ],
+        help="training dataset options",
     )
 
     args = parser.parse_args()
