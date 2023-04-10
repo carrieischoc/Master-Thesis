@@ -43,7 +43,7 @@ def get_tokenized_dataset(
             dataset_name,
             split,
             base_path,
-            f"tokenized/{options}/{str(drop_ratio)}_{str(max_input_length)}",
+            f"tokenized/{options}/{str(max_input_length)}_{str(max_output_length)}",
         )
     except FileNotFoundError:
         ds_str = load_from_path(dataset_name, split, base_path, "list_str_format")
@@ -59,7 +59,7 @@ def get_tokenized_dataset(
                 dataset_name, split, base_path, drop_ratio=drop_ratio
             )
             write_js(f"drop_indices_{str(drop_ratio)}", path, drop_indices)
-            
+
         dataset = dataset.filter(
             lambda example, indice: indice not in drop_indices, with_indices=True
         )
@@ -72,21 +72,29 @@ def get_tokenized_dataset(
                 truncation=True,
                 max_length=max_input_length,
             )
-            targets = tokenizer(
-                example["target"],
-                padding="max_length",
-                truncation=True,
-                max_length=max_output_length,
-            )
 
-            # Return the input and target IDs and the attention masks
-            return {
-                "input_ids": inputs["input_ids"],
-                "attention_mask": inputs["attention_mask"],
-                "decoder_input_ids": targets["input_ids"],
-                "decoder_attention_mask": targets["attention_mask"],
-                "labels": targets["input_ids"],
-            }
+            if split != "test":
+                targets = tokenizer(
+                    example["target"],
+                    padding="max_length",
+                    truncation=True,
+                    max_length=max_output_length,
+                )
+
+                # Return the input and target IDs and the attention masks
+                return {
+                    "input_ids": inputs["input_ids"],
+                    "attention_mask": inputs["attention_mask"],
+                    "decoder_input_ids": targets["input_ids"],
+                    "decoder_attention_mask": targets["attention_mask"],
+                    "labels": targets["input_ids"],
+                }
+            else:
+                return {
+                    "input_ids": inputs["input_ids"],
+                    "attention_mask": inputs["attention_mask"],
+                    # "decoder_input_ids": decoder_input_ids,
+                }
             # the following only outputs tokenized source
             # def tokenize_function(example):
             #     return tokenizer(
@@ -106,7 +114,7 @@ def get_tokenized_dataset(
             base_path,
             dataset_name,
             split,
-            f"tokenized/{options}/{str(drop_ratio)}_{str(max_input_length)}",
+            f"tokenized/{options}/{str(max_input_length)}_{str(max_output_length)}",
         )
         dataset.save_to_disk(save_path)
 

@@ -93,8 +93,8 @@ if __name__ == "__main__":
 
     args = get_args()
     # adapted from Dennis summaries library
-    max_input_length = 256
-    max_output_length = 256
+    max_input_length = 192
+    max_output_length = 160
     # get the training arguments
     seq2seq_args = get_seq2seq_args(args, max_input_length)
 

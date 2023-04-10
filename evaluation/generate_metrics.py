@@ -31,7 +31,7 @@ if __name__ == "__main__":
     path_to_checkpoint = os.path.join(
         base_path,
         args.dataset[0],
-        f"models/vanilla/{args.option[0]}_{str(args.drop_ratio)}_256",
+        f"models/vanilla/{args.option[0]}_{str(args.drop_ratio)}_128",
     )
     # checkpoints = [
     #     os.path.join(path_to_checkpoint, f)
@@ -43,7 +43,7 @@ if __name__ == "__main__":
     #     for i in ["1", "2", "3", "4", "5"]
     # ]
     # the best checkpoint
-    checkpoints = [os.path.join(path_to_checkpoint, "checkpoint-10")]
+    checkpoints = [os.path.join(path_to_checkpoint, "checkpoint-5")]
 
     for cp in checkpoints:
         path = os.path.join(cp, "predict_2")
