@@ -3,6 +3,7 @@ numpy
 pandas
 tqdm
 spacy
+matplotlib
 seaborn
 rouge-score
 transformers>=4.15
