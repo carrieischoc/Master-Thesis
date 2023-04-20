@@ -31,7 +31,7 @@ if __name__ == "__main__":
     path_to_checkpoint = os.path.join(
         base_path,
         args.dataset[0],
-        f"models/vanilla/{args.option[0]}_{str(args.drop_ratio)}_128",
+        f"models/vanilla/{args.option[0]}/192_160_12",
     )
     # checkpoints = [
     #     os.path.join(path_to_checkpoint, f)
@@ -43,12 +43,11 @@ if __name__ == "__main__":
     #     for i in ["1", "2", "3", "4", "5"]
     # ]
     # the best checkpoint
-    checkpoints = [os.path.join(path_to_checkpoint, "checkpoint-5")]
+    checkpoints = [os.path.join(path_to_checkpoint, "checkpoint-96600")]
 
     for cp in checkpoints:
-        path = os.path.join(cp, "predict_2")
+        path = os.path.join(cp, "predict")
         dataset = Dataset.load_from_disk(path)
-        # dataset = dataset.map(compute_score, num_proc=8)
         # blue_scores = bleu.compute(
         #     predictions=dataset["prediction"], references=dataset["target"]
         # )

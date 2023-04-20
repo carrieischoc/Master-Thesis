@@ -10,7 +10,7 @@ from utils import get_tokenized_dataset, load_from_path
 from preprocess.utils import base_path, get_args
 
 
-def get_seq2seq_args(args, max_input_length: int):
+def get_seq2seq_args(args, max_input_length: int, max_output_length: int):
 
     if args.debug == True:
         path = os.path.join(base_path, args.dataset[0], f"models/debug/vanilla")
@@ -49,7 +49,7 @@ def get_seq2seq_args(args, max_input_length: int):
         path = os.path.join(
             base_path,
             args.dataset[0],
-            f"models/vanilla/{args.option[0]}_{str(args.drop_ratio)}_{str(max_input_length)}",
+            f"models/vanilla/{args.option[0]}/{str(max_input_length)}_{str(max_output_length)}",
         )
         seq2seq_args = Seq2SeqTrainingArguments(
             output_dir=path,
@@ -59,16 +59,16 @@ def get_seq2seq_args(args, max_input_length: int):
             do_predict=False,
             evaluation_strategy="epoch",  # better estimation of model
             auto_find_batch_size=True,
-            # per_device_train_batch_size=8, # defaults to 8, Larger batch sizes -> faster and better
-            # per_device_eval_batch_size=8,
-            gradient_accumulation_steps=4,  # a large value needs more memory
-            eval_accumulation_steps=16,
-            eval_delay=0.5,  # evaluate after training half epoch
-            learning_rate=5e-5,
+            per_device_train_batch_size=16, # defaults to 8, Larger batch sizes -> faster and better
+            per_device_eval_batch_size=16,
+            gradient_accumulation_steps=4,  
+            eval_accumulation_steps=8,
+            # eval_delay=0.5,  # evaluate after training half epoch
+            learning_rate=5e-4,
             num_train_epochs=5,  # increase the number gradually until the model stops improving
-            # lr_scheduler_type="linear", # defaults to "linear"
-            warmup_steps=2000,  # 1% of the training steps
-            weight_decay=1e-5,
+            lr_scheduler_type="linear", # defaults to "linear"
+            warmup_steps=10000,  # 10% of the training steps
+            weight_decay=5e-5,
             logging_strategy="steps",
             logging_steps=250,
             save_strategy="epoch",  # Save is done at the end of each epoch.
@@ -96,7 +96,7 @@ if __name__ == "__main__":
     max_input_length = 192
     max_output_length = 160
     # get the training arguments
-    seq2seq_args = get_seq2seq_args(args, max_input_length)
+    seq2seq_args = get_seq2seq_args(args, max_input_length, f"{max_output_length}_12r")
 
     # Load the pre-trained model and tokenizer
     model_name = "google/mt5-base"
@@ -112,6 +112,7 @@ if __name__ == "__main__":
         args.dataset[0],
         "validation",
         options=args.option[0],
+        drop_ratio=True,
         max_input_length=max_input_length,
         max_output_length=max_output_length,
     )
@@ -121,6 +122,7 @@ if __name__ == "__main__":
         args.dataset[0],
         "train",
         options=args.option[0],
+        drop_ratio=True,
         max_input_length=max_input_length,
         max_output_length=max_output_length,
     )
