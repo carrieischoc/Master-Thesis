@@ -43,7 +43,7 @@ def get_tokenized_dataset(
             dataset_name,
             split,
             base_path,
-            f"tokenized/{options}/{str(max_input_length)}_{str(max_output_length)}_removed",
+            f"tokenized/{options}/{str(max_input_length)}_{str(max_output_length)}",
         )
     except FileNotFoundError:
         try:
@@ -74,7 +74,7 @@ def get_tokenized_dataset(
 
             # remove the noise
             df = dataset.to_pandas()
-            df = remove_noise(df)
+            df = remove_noise(df, ["intermediate_summary", "target"])
             dataset = Dataset.from_pandas(df)
             dataset.save_to_disk(os.path.join(
             base_path,
@@ -139,7 +139,7 @@ def get_tokenized_dataset(
             base_path,
             dataset_name,
             split,
-            f"tokenized/{options}/{str(max_input_length)}_{str(max_output_length)}_removed",
+            f"tokenized/{options}/{str(max_input_length)}_{str(max_output_length)}",
         )
         dataset.save_to_disk(save_path)
 

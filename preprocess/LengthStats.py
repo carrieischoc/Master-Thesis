@@ -7,16 +7,20 @@ from preprocess.utils import base_path, get_args
 
 
 def compute_average_cpRatio(dataset_name: str, base_path: str):
-    '''
+    """
     Compute the average compression ratio of th e training dataset;
     Use it to compute the estimated target_len of test data.
-    '''
+    """
     path = os.path.join(base_path, dataset_name, "train", "list_list_format")
     dataset = Dataset.load_from_disk(path)
-    dataset = dataset.map(lambda example: {"len": len(example["target"])/len(example["source"])}, num_proc=16)
+    dataset = dataset.map(
+        lambda example: {"len": len(example["target"]) / len(example["source"])},
+        num_proc=16,
+    )
     cp_ratio = np.mean(dataset["len"])
 
     return cp_ratio
+
 
 def generate_length(
     dataset_name: str,
@@ -43,7 +47,9 @@ def generate_length(
             if example["target_len"] == 1:
                 example["L"] = 3
             else:
-                example["L"] = int(example["target_len"] + round(5.0 / example["target_len"]) + 1)
+                example["L"] = int(
+                    example["target_len"] + round(5.0 / example["target_len"]) + 1
+                )
             if example["L"] >= 0.5 * example["source_len"]:
                 example["L"] = int(example["target_len"] + 1)
 

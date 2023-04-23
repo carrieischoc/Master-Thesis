@@ -5,6 +5,7 @@ from typing import List
 import numpy as np
 from datasets import Dataset
 from preprocess.utils import base_path, get_args
+
 # from inspection import whitespace_token
 from preprocess.split import check_combine_str
 
@@ -235,16 +236,17 @@ def filter_out_indices(
 
     return indices_to_drop  # set() is unordered and can change the order.
 
+
 def remove_noise(df, features: List[str]):
     start_char = ["(", ";", ";", ",", ",", ";", ";", ",", ","]
     end_char = [")", "; ", ", ", ", ", "; ", ";", ",", ",", ";"]
     pattern1 = [f"\\{i}[^a-zA-Z0-9]*\\{j}" for i, j in zip(start_char, end_char)]
     pattern1 = "|".join(pattern1)
-    pattern2 = [r'\(; ',r'\( ; ',r'\(, ',r'\( , ']
+    pattern2 = [r"\(; ", r"\( ; ", r"\(, ", r"\( , "]
     pattern2 = "|".join(pattern2)
     for feature in features:
         df[feature] = df[feature].str.replace(pattern1, "", regex=True)
-        df[feature] = df[feature].replace(pattern2, '(', regex=True)
+        df[feature] = df[feature].replace(pattern2, "(", regex=True)
 
     return df
 

@@ -59,16 +59,16 @@ def get_seq2seq_args(args, max_input_length: int, max_output_length: int):
             do_predict=False,
             evaluation_strategy="epoch",  # better estimation of model
             auto_find_batch_size=True,
-            per_device_train_batch_size=16, # defaults to 8, Larger batch sizes -> faster and better
+            per_device_train_batch_size=16, # defaults to 8
             per_device_eval_batch_size=16,
             gradient_accumulation_steps=4,  
             eval_accumulation_steps=8,
             # eval_delay=0.5,  # evaluate after training half epoch
             learning_rate=5e-4,
             num_train_epochs=5,  # increase the number gradually until the model stops improving
-            lr_scheduler_type="linear", # defaults to "linear"
-            warmup_steps=10000,  # 10% of the training steps
-            weight_decay=5e-5,
+            lr_scheduler_type="cosine", # defaults to "linear"
+            warmup_steps=4800,  # 10% of the training steps
+            weight_decay=0.01,
             logging_strategy="steps",
             logging_steps=250,
             save_strategy="epoch",  # Save is done at the end of each epoch.
@@ -96,7 +96,7 @@ if __name__ == "__main__":
     max_input_length = 192
     max_output_length = 160
     # get the training arguments
-    seq2seq_args = get_seq2seq_args(args, max_input_length, f"{max_output_length}_12r")
+    seq2seq_args = get_seq2seq_args(args, max_input_length, f"{max_output_length}_5")
 
     # Load the pre-trained model and tokenizer
     model_name = "google/mt5-base"

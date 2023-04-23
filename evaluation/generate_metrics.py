@@ -43,10 +43,10 @@ if __name__ == "__main__":
     #     for i in ["1", "2", "3", "4", "5"]
     # ]
     # the best checkpoint
-    checkpoints = [os.path.join(path_to_checkpoint, "checkpoint-96600")]
+    checkpoints = [os.path.join(path_to_checkpoint, "checkpoint-38640")]
 
     for cp in checkpoints:
-        path = os.path.join(cp, "predict")
+        path = os.path.join(cp, "predict_3")
         dataset = Dataset.load_from_disk(path)
         # blue_scores = bleu.compute(
         #     predictions=dataset["prediction"], references=dataset["target"]
