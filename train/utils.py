@@ -1,7 +1,7 @@
 import os
 import json
 from datasets import Dataset
-from preprocess.filter import filter_out_indices
+from preprocess.filter import filter_out_indices, remove_noise
 from preprocess.split import check_combine_feature
 
 
@@ -21,7 +21,7 @@ def read_js(filename):
 
 def write_js(filename, path, data):
     os.makedirs(path, exist_ok=True)
-    f = open(f"{path}/{filename}", "w+")
+    f = open(os.path.join(path,filename), "w+")
     json.dump(data, f)
 
 
@@ -31,7 +31,7 @@ def get_tokenized_dataset(
     dataset_name: str,
     split: str,
     options: str,
-    drop_ratio: bool = False,
+    drop_ratio: bool = True,
     max_input_length: int = 128,
     max_output_length: int = 128,
 ):
@@ -46,23 +46,42 @@ def get_tokenized_dataset(
             f"tokenized/{options}/{str(max_input_length)}_{str(max_output_length)}",
         )
     except FileNotFoundError:
-        ds_str = load_from_path(dataset_name, split, base_path, "list_str_format")
-        dataset = load_from_path(dataset_name, split, base_path, name=options)
-        dataset = dataset.remove_columns("target")
-        dataset = dataset.add_column(name="target", column=ds_str["target"])
-        dataset = check_combine_feature(dataset, "intermediate_summary")
         try:
-            path = os.path.join(base_path, dataset_name, split, "tokenized")
-            drop_indices = read_js(f"{path}/drop_indices_{str(drop_ratio)}")
-        except FileNotFoundError:
-            drop_indices = filter_out_indices(
-                dataset_name, split, base_path, drop_ratio=drop_ratio
-            )
-            write_js(f"drop_indices_{str(drop_ratio)}", path, drop_indices)
-
-        dataset = dataset.filter(
-            lambda example, indice: indice not in drop_indices, with_indices=True
+            dataset = load_from_path(
+            dataset_name,
+            split,
+            base_path,
+            f"tokenized/{options}/noise_removed",
         )
+        except FileNotFoundError:
+            ds_str = load_from_path(dataset_name, split, base_path, "list_str_format")
+            dataset = load_from_path(dataset_name, split, base_path, name=options)
+            dataset = dataset.remove_columns("target")
+            dataset = dataset.add_column(name="target", column=ds_str["target"])
+            dataset = check_combine_feature(dataset, "intermediate_summary")
+            try:
+                path = os.path.join(base_path, dataset_name, split, "tokenized")
+                drop_indices = read_js(f"{path}/drop_indices_{str(drop_ratio)}")
+            except FileNotFoundError:
+                drop_indices = filter_out_indices(
+                    dataset_name, split, base_path, drop_ratio=drop_ratio
+                )
+                write_js(f"drop_indices_{str(drop_ratio)}", path, drop_indices)
+
+            dataset = dataset.filter(
+                lambda example, indice: indice not in drop_indices, with_indices=True
+            )
+
+            # remove the noise
+            df = dataset.to_pandas()
+            df = remove_noise(df, ["intermediate_summary", "target"])
+            dataset = Dataset.from_pandas(df)
+            dataset.save_to_disk(os.path.join(
+            base_path,
+            dataset_name,
+            split,
+            f"tokenized/{options}/noise_removed"))
+
 
         def tokenize_function(example):
             # Tokenize inputs and targets
@@ -104,12 +123,18 @@ def get_tokenized_dataset(
             #         truncation=True,
             #         max_length=512,
             #     )
-
-        dataset = dataset.map(
-            tokenize_function,
-            num_proc=16,
-            remove_columns=["intermediate_summary", "target"],
-        )
+        if split != "test":
+            dataset = dataset.map(
+                tokenize_function,
+                num_proc=16,
+                remove_columns=["intermediate_summary", "target"],
+            )
+        else:
+            dataset = dataset.map(
+                tokenize_function,
+                num_proc=16,
+            )
+            
         save_path = os.path.join(
             base_path,
             dataset_name,

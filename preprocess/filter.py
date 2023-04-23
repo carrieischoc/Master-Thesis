@@ -5,9 +5,9 @@ from typing import List
 import numpy as np
 from datasets import Dataset
 from preprocess.utils import base_path, get_args
-from inspection import whitespace_token
+
+# from inspection import whitespace_token
 from preprocess.split import check_combine_str
-from train.utils import read_js
 
 
 def select_ds_column(dataset, col: List[str]):
@@ -210,8 +210,8 @@ def filter_out_indices(
     # Filter out examples with the ratio (summary/reference token numbers) > 0.5.
     if drop_ratio == True:
         try:
-            src = read_js(f"{base_path}/{split}_src_length.json")
-            tg = read_js(f"{base_path}/{split}_tg_length.json")
+            src = json.load(open(f"{base_path}/{dataset_name}/{split}_src_length.json"))
+            tg = json.load(open(f"{base_path}/{dataset_name}/{split}_tg_length.json"))
         except:
             stats_src = whitespace_token(df["source"])
             stats_tg = whitespace_token(df["target"])
@@ -221,7 +221,7 @@ def filter_out_indices(
             json.dump(src, f)
             f = open(f"{split}_tg_length.json", "w+")
             json.dump(tg, f)
-        ratio = np.array(src) / np.array(tg)
+        ratio = np.array(tg) / np.array(src)
         ratio_indices = list(np.where(ratio > 0.5)[0])
         indices_to_drop += ratio_indices
 
@@ -231,7 +231,24 @@ def filter_out_indices(
     indices_to_drop += list(df.index[df["source"].str.count(" - ") > 5])
     indices_to_drop += list(df.index[df["source"].str.count(" / ") > 5])
 
-    return list(set(indices_to_drop))  # set() is unordered and can change the order.
+    indices_to_drop = list(set(indices_to_drop))
+    indices_to_drop = [int(x) for x in indices_to_drop]
+
+    return indices_to_drop  # set() is unordered and can change the order.
+
+
+def remove_noise(df, features: List[str]):
+    start_char = ["(", ";", ";", ",", ",", ";", ";", ",", ","]
+    end_char = [")", "; ", ", ", ", ", "; ", ";", ",", ",", ";"]
+    pattern1 = [f"\\{i}[^a-zA-Z0-9]*\\{j}" for i, j in zip(start_char, end_char)]
+    pattern1 = "|".join(pattern1)
+    pattern2 = [r"\(; ", r"\( ; ", r"\(, ", r"\( , "]
+    pattern2 = "|".join(pattern2)
+    for feature in features:
+        df[feature] = df[feature].str.replace(pattern1, "", regex=True)
+        df[feature] = df[feature].replace(pattern2, "(", regex=True)
+
+    return df
 
 
 if __name__ == "__main__":

@@ -7,3 +7,9 @@ data/
 
 # ignore the bertsum
 extraction/bertsum_intermediate.py
+
+# ignore discarded evaluation script
+evaluation/evaluate_on_*.py
+
+# ignore duplicates
+train/train_vanilla_en_2.py
