@@ -33,25 +33,25 @@ def generate_length(
     path = os.path.join(base_path, dataset_name, split, "list_list_format")
     dataset = Dataset.load_from_disk(path)
 
-    if split == "test":
-        cp_ratio = compute_average_cpRatio(dataset_name, base_path)
+    # if split == "test":
+    #     cp_ratio = compute_average_cpRatio(dataset_name, base_path)
 
     def len_map(example):
-        example["source_len"] = len(example["source"])
+        # example["source_len"] = len(example["source"])
 
-        if split == "test":
-            example["target_len"] = math.ceil(example["source_len"] * cp_ratio)
+        # if split == "test":
+        #     example["target_len"] = math.ceil(example["source_len"] * cp_ratio)
+        # else:
+        #     example["target_len"] = len(example["target"])
+        example["len_ratio"] = example["target_len"] / example["source_len"]
+        if example["target_len"] == 1:
+            example["L"] = 3
         else:
-            example["target_len"] = len(example["target"])
-            example["len_ratio"] = example["target_len"] / example["source_len"]
-            if example["target_len"] == 1:
-                example["L"] = 3
-            else:
-                example["L"] = int(
-                    example["target_len"] + round(5.0 / example["target_len"]) + 1
-                )
-            if example["L"] >= 0.5 * example["source_len"]:
-                example["L"] = int(example["target_len"] + 1)
+            example["L"] = int(
+                example["target_len"] + round(5.0 / example["target_len"]) + 1
+            )
+        if example["L"] >= 0.5 * example["source_len"]:
+            example["L"] = int(example["target_len"] + 1)
 
         return example
 
