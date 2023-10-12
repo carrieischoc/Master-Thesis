@@ -6,7 +6,7 @@ from transformers import (
     Seq2SeqTrainingArguments,
     DataCollatorForSeq2Seq,
 )
-from utils import get_tokenized_dataset, load_from_path
+from utils import get_tokenized_dataset, load_from_path, get_single_tokenized_dataset
 from preprocess.utils import base_path, get_args
 
 
@@ -59,15 +59,15 @@ def get_seq2seq_args(args, max_input_length: int, max_output_length: int):
             do_predict=False,
             evaluation_strategy="epoch",  # better estimation of model
             auto_find_batch_size=True,
-            per_device_train_batch_size=16, # defaults to 8
-            per_device_eval_batch_size=16,
-            gradient_accumulation_steps=4,  
+            per_device_train_batch_size=8,  # defaults to 8
+            per_device_eval_batch_size=8,
+            gradient_accumulation_steps=4,
             eval_accumulation_steps=8,
             # eval_delay=0.5,  # evaluate after training half epoch
-            learning_rate=5e-4,
+            learning_rate=5e-5,
             num_train_epochs=5,  # increase the number gradually until the model stops improving
-            lr_scheduler_type="cosine", # defaults to "linear"
-            warmup_steps=4800,  # 10% of the training steps
+            lr_scheduler_type="linear",  # defaults to "linear"
+            warmup_steps=9750,  # 10% of the training steps
             weight_decay=0.01,
             logging_strategy="steps",
             logging_steps=250,
@@ -76,6 +76,7 @@ def get_seq2seq_args(args, max_input_length: int, max_output_length: int):
             data_seed=128,
             # bf16=True,  # experimental feature, doesn't work on our Titan RTX GPUs!
             # bf16_full_eval=True,
+            # fp16=True,
             run_name="GEM/xwikis English Summarization",
             optim="adamw_torch",  # optimizer
             gradient_checkpointing=False,
@@ -92,40 +93,92 @@ if __name__ == "__main__":
     # "baselines/intermediate_top_extended_oracle_score"
 
     args = get_args()
-    # adapted from Dennis summaries library
-    max_input_length = 192
-    max_output_length = 160
-    # get the training arguments
-    seq2seq_args = get_seq2seq_args(args, max_input_length, f"{max_output_length}_5")
-
     # Load the pre-trained model and tokenizer
-    model_name = "google/mt5-base"
+    # model_name = "google/mt5-base"
+    model_name = "google/flan-t5-base"
     # don't use a Rust-based tokenizer
     tokenizer = AutoTokenizer.from_pretrained(
         model_name, model_max_length=512, use_fast=False
     )
     model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
 
-    dataset_va = get_tokenized_dataset(
-        tokenizer,
-        base_path,
-        args.dataset[0],
-        "validation",
-        options=args.option[0],
-        drop_ratio=True,
-        max_input_length=max_input_length,
-        max_output_length=max_output_length,
-    )
-    dataset_tr = get_tokenized_dataset(
-        tokenizer,
-        base_path,
-        args.dataset[0],
-        "train",
-        options=args.option[0],
-        drop_ratio=True,
-        max_input_length=max_input_length,
-        max_output_length=max_output_length,
-    )
+    if args.dataset[0] == "wikis_news_bills":
+        max_input_length = 512
+        max_output_length = 256
+        seq2seq_args = get_seq2seq_args(
+            args, max_input_length, f"{max_output_length}_t5"
+        )
+        # seq2seq_args.gradient_accumulation_steps = 8 # too large
+        seq2seq_args.warmup_steps = 14172
+
+        dataset_va = get_single_tokenized_dataset(
+            tokenizer,
+            base_path,
+            "validation",
+            options=args.option[0],
+            max_input_length=max_input_length,
+            max_output_length=max_output_length,
+        )
+        dataset_tr = get_single_tokenized_dataset(
+            tokenizer,
+            base_path,
+            "train",
+            options=args.option[0],
+            max_input_length=max_input_length,
+            max_output_length=max_output_length,
+        )
+
+    else:
+
+        if args.dataset[0] == "GEM/xwikis_en":
+            # adapted from Dennis summaries library
+            max_input_length = 176 # 264(L) 192(target_len)
+            max_output_length = 136
+            # get the training arguments
+            seq2seq_args = get_seq2seq_args(
+                args, max_input_length, f"{max_output_length}_t5"
+            )
+
+        # modify training arguments for different datasets
+        if args.dataset[0] == "billsum":
+            max_input_length = 840
+            max_output_length = 416
+            seq2seq_args = get_seq2seq_args(
+                args, max_input_length, max_output_length
+            )
+            seq2seq_args.num_train_epochs = 10
+            seq2seq_args.warmup_steps = 2354
+            seq2seq_args.lr_scheduler_type = "cosine"
+
+        if args.dataset[0] == "cnn_dailymail":
+            max_input_length = 184
+            max_output_length = 96
+            seq2seq_args = get_seq2seq_args(
+                args, max_input_length, max_output_length
+            )
+            seq2seq_args.num_train_epochs = 7
+            seq2seq_args.warmup_steps = 6000
+
+        dataset_va = get_tokenized_dataset(
+            tokenizer,
+            base_path,
+            args.dataset[0],
+            "validation",
+            options=args.option[0],
+            drop_ratio=True,
+            max_input_length=max_input_length,
+            max_output_length=max_output_length,
+        )
+        dataset_tr = get_tokenized_dataset(
+            tokenizer,
+            base_path,
+            args.dataset[0],
+            "train",
+            options=args.option[0],
+            drop_ratio=True,
+            max_input_length=max_input_length,
+            max_output_length=max_output_length,
+        )
 
     if args.debug == True:
         # select 4 exs to debug and predict
@@ -147,6 +200,7 @@ if __name__ == "__main__":
 
     # trainer.args.num_train_epochs += 5
     trainer.train()
+    # trainer.train("checkpoint-96600")
 
     # test the predict
     if args.debug == True:

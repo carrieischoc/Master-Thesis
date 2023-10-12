@@ -1,4 +1,5 @@
 import os
+import numpy as np
 from transformers import (
     AutoModelForSeq2SeqLM,
     AutoTokenizer,
@@ -31,9 +32,9 @@ def get_seq2seq_args(model_name):
         eval_accumulation_steps=8,
         # eval_delay=0.5,  # evaluate after training half epoch
         learning_rate=5e-5,
-        num_train_epochs=3,  # increase the number gradually until the model stops improving
+        num_train_epochs=5,  # increase the number gradually until the model stops improving
         lr_scheduler_type="linear",  # defaults to "linear"
-        warmup_steps=9750,  # 10% of the training steps
+        warmup_steps=975,  # 10% of the training steps
         weight_decay=0.01,
         logging_strategy="steps",
         logging_steps=250,
@@ -58,15 +59,15 @@ if __name__ == "__main__":
     # "baselines/intermediate_top_extended_oracle_score"
 
     args = get_args()
-    max_input_length = 288
+    max_input_length = 192
     max_output_length = 160
     # get the training arguments
     # model_name: "wiki_lexrank_oracle_random"
-    model_name = "wiki_wiki_oracle_random_cos"
+    model_name = "news_wikis"
     seq2seq_args = get_seq2seq_args(model_name)
 
-    if args.dataset[0] == "GEM/xwikis_en":
-        seq2seq_args.lr_scheduler_type="cosine"
+    # if args.dataset[0] == "GEM/xwikis_en":
+    #     seq2seq_args.lr_scheduler_type="cosine"
     if args.dataset[0] == "billsum":        
         max_input_length = 832
         max_output_length = 448
@@ -83,13 +84,13 @@ if __name__ == "__main__":
     # Load the pre-trained model from checkpoint
     checkpoint = os.path.join(
         base_path,
-        "GEM/xwikis_en",
+        "cnn_dailymail",
         "models",
         "vanilla",
         "extraction",
         "lexrank_target_len",
-        "192_160_10",
-        "checkpoint-96600",
+        "192_128",
+        "checkpoint-59059",
     )
     # don't use a Rust-based tokenizer
     tokenizer = AutoTokenizer.from_pretrained(
@@ -117,6 +118,13 @@ if __name__ == "__main__":
         max_input_length=max_input_length,
         max_output_length=max_output_length,
     )
+  
+    dataset_va = dataset_va.select(
+            np.random.choice(dataset_va.num_rows, size=int(dataset_va.num_rows * 0.1), replace=False)
+        )
+    dataset_tr = dataset_tr.select(
+            np.random.choice(dataset_tr.num_rows, size=int(dataset_tr.num_rows * 0.1), replace=False)
+        )
 
     data_collator = DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model)
 
